@@ -9,31 +9,42 @@
   例: python3 default_probe.py "" http://localhost:8000 5   ← ""でも省略でも可
   --domain io で「コーディング以外」の判断点(構造化出力・抽出・文章・対話メタ)を測定。
   --domain all で両バッテリー。既定は code(従来の32点)。
+  --probes pack.json で判断点を外部定義(宣言的ルール。packs/io_en.json 参照)。
+  --diff A.json B.json [C.json ...] でモデル間比較(2個以上)。
+  --assert baseline.json でドリフト検知(既定変化/安定性低下/実装不能化→exit 1。CI用)。
 """
 import sys, json, re, urllib.request, types
 
-# diffモード: python3 default_probe.py --diff A.json B.json
+# diffモード: python3 default_probe.py --diff A.json B.json [C.json ...](2個以上)
 if len(sys.argv) > 1 and sys.argv[1] == "--diff":
     import json as _j
-    A = _j.load(open(sys.argv[2])); B = _j.load(open(sys.argv[3]))
-    ma, mb = A["model"], B["model"]
-    da = {r["id"]: r for r in A["rows"]}; db = {r["id"]: r for r in B["rows"]}
-    print(f"# 既定プロファイル diff: A={ma}  vs  B={mb}")
-    print(f"{'probe':<18} {'A既定':<20} {'B既定':<20} 差分")
+    profs = [_j.load(open(f)) for f in sys.argv[2:]]
+    if len(profs) < 2:
+        print("--diff にはプロファイルJSONを2個以上指定してください"); sys.exit(2)
+    models = [p["model"] for p in profs]
+    maps = [{r["id"]: r for r in p["rows"]} for p in profs]
+    ids = []
+    for m in maps:                                    # 出現順を保った和集合
+        ids += [i for i in m if i not in ids]
+    print("# 既定プロファイル diff: " + "  vs  ".join(models))
+    w = 20
+    print(f"{'probe':<18} " + " ".join(f"{m[:w]:<{w}}" for m in models) + " 差分")
     diffs = []
-    for pid in da:
-        a, b = da[pid], db.get(pid)
-        if not b: continue
-        ca, cb = a["canonical"], b["canonical"]
-        sa, sb = a["stability"], b["stability"]
+    for pid in ids:
+        rs = [m.get(pid) for m in maps]
+        cs = [r["canonical"] if r else "—" for r in rs]
+        ss = [r["stability"] if r else None for r in rs]
+        present = [c for c in cs if c != "—"]
         flag = ""
-        if ca != cb: flag = "★既定が違う"
-        elif sa < 0.8 or sb < 0.8: flag = "△どちらか不安定"
-        print(f"{pid:<18} {ca[:20]:<20} {cb[:20]:<20} {flag}")
-        if flag: diffs.append((pid, ca, cb, sa, sb, flag))
+        if len(set(present)) > 1: flag = "★既定が違う"
+        elif any(s is not None and s < 0.8 for s in ss): flag = "△不安定なモデルあり"
+        print(f"{pid:<18} " + " ".join(f"{c[:w]:<{w}}" for c in cs) + f" {flag}")
+        if flag: diffs.append((pid, rs, flag))
     print(f"\n## モデル差のある判断点(={len(diffs)}件): ここは『モデルを替えたら書き換える』対象")
-    for pid, ca, cb, sa, sb, flag in diffs:
-        print(f"  - {pid}: {ma}=「{ca}」(安定{sa}) / {mb}=「{cb}」(安定{sb})  {flag}")
+    for pid, rs, flag in diffs:
+        detail = " / ".join(f"{m}=「{r['canonical']}」(安定{r['stability']})" if r else f"{m}=—"
+                            for m, r in zip(models, rs))
+        print(f"  - {pid}: {detail}  {flag}")
     print("\nこの差分表 = 同じ意図でもモデルによって明示すべき点が入れ替わる箇所。")
     sys.exit(0)
 
@@ -53,6 +64,10 @@ ap.add_argument("--key", default=None, help="APIキー (省略時 PROBE_API_KEY/
 ap.add_argument("--only", default=None, help="実行する判断点をカンマ区切りで限定 (例: missing_key,range_incl)")
 ap.add_argument("--domain", choices=["code", "io", "all"], default="code",
                 help="判断点バッテリー: code=コーディング(既定) / io=構造化出力・抽出・文章 / all=両方")
+ap.add_argument("--probes", default=None, metavar="PACK.json",
+                help="プローブパックJSON(判断点を外部定義)。指定時は --domain より優先")
+ap.add_argument("--assert", dest="assert_base", default=None, metavar="BASELINE.json",
+                help="ベースラインプロファイルと比較し、既定変化/安定性低下/実装不能化があれば exit 1 (CI・モデル更新の回帰検知用)")
 _argv = sys.argv[1:]
 if _argv and _argv[0].startswith(("http://", "https://")):
     _argv.insert(0, "")   # 先頭がURL = model省略とみなし繰り上げ
@@ -569,6 +584,103 @@ PROBES_IO = [
          q='おいしいコーヒーの淹れ方の手順を5つ出力してください。'),
 ]
 
+# ==== プローブパック (--probes pack.json): 判断点を外部JSONで定義する ====
+# パック形式: {"pack": "名前", "probes": [{...}]}
+#   text プローブ: {"id", "kind":"text", "q", "classify":[<rule>...], "fallback"}
+#     rule = {"label": L, <条件>}。条件は最初に一致した rule の label を返す:
+#       regex / contains / len_lt / len_ge       … 出力テキスト全体に対して
+#       json_parses: true|false                  … 出力がそのまま json.loads 可能か
+#       json_type: "dict"|"list"                 … find_json の結果型
+#       json_only_keys: [k...]                   … dictのキー集合が完全一致
+#       json_field: k + (equals / value_regex / is_null / absent / type)
+#       all: [rule...] / any: [rule...]          … 複合条件(labelは外側に)
+#   code プローブ: {"id", "kind":"code", "q", "names":[関数名候補],
+#                  "cases":[{"args":[...], "result":... | "exception": true|"型名",
+#                            "label": L}...], "fallback"}
+#     生成コードを実行し、casesを順に評価(argsで呼び result 一致 / 例外一致 → label)。
+# エラー系ラベルは "ERR" 始まりにすると実装不能カテゴリとして集計される。
+
+def _norm(x):
+    if isinstance(x, tuple): x = list(x)
+    if isinstance(x, list): return [_norm(v) for v in x]
+    if isinstance(x, dict): return {k: _norm(v) for k, v in x.items()}
+    return x
+
+def _rule_match(r, text):
+    if "all" in r: return all(_rule_match(s, text) for s in r["all"])
+    if "any" in r: return any(_rule_match(s, text) for s in r["any"])
+    if "json_parses" in r:
+        try: json.loads(text.strip()); ok = True
+        except Exception: ok = False
+        return ok == r["json_parses"]
+    if "json_type" in r:
+        j = find_json(text)
+        return isinstance(j, {"dict": dict, "list": list}[r["json_type"]])
+    if "json_only_keys" in r:
+        j = find_json(text)
+        return isinstance(j, dict) and set(j.keys()) == set(r["json_only_keys"])
+    if "json_field" in r:
+        j = find_json(text)
+        if not isinstance(j, dict): return False
+        f = r["json_field"]
+        if r.get("absent"): return f not in j
+        if f not in j: return False
+        v = j[f]
+        if r.get("is_null"): return v is None
+        if "equals" in r: return v == r["equals"]
+        if "value_regex" in r: return v is not None and re.search(r["value_regex"], str(v)) is not None
+        if "type" in r:
+            t = r["type"]
+            if t == "number": return isinstance(v, (int, float)) and not isinstance(v, bool)
+            return isinstance(v, {"string": str, "bool": bool, "list": list, "dict": dict}[t])
+        return True   # フィールドが存在する、のみ
+    if "regex" in r: return re.search(r["regex"], text) is not None
+    if "contains" in r: return r["contains"] in text
+    if "len_lt" in r: return len(text.strip()) < r["len_lt"]
+    if "len_ge" in r: return len(text.strip()) >= r["len_ge"]
+    return False
+
+def _compile_text(rules, fallback):
+    def classify(text):
+        for r in rules:
+            try:
+                if _rule_match(r, text): return r["label"]
+            except Exception:
+                continue
+        return fallback
+    return classify
+
+def _compile_code(cases, fallback):
+    def classify(fn):
+        for c in cases:
+            a = c.get("args", [])
+            try:
+                res = fn(*[json.loads(json.dumps(x)) for x in a])
+            except Exception as e:
+                exc = c.get("exception")
+                if exc is True or exc == type(e).__name__:
+                    return c["label"].replace("{type}", type(e).__name__)
+                continue
+            if "result" in c and _norm(res) == _norm(c["result"]):
+                return c["label"]
+            if c.get("no_exception"):   # 呼べて例外が出なければよい
+                return c["label"]
+        return fallback
+    return classify
+
+def load_pack(path):
+    pk = json.load(open(path))
+    probes = []
+    for p in pk["probes"]:
+        if p.get("kind", "text") == "text":
+            probes.append(dict(id=p["id"], q=p["q"], kind="text",
+                               classify=_compile_text(p["classify"], p.get("fallback", "他"))))
+        else:
+            probes.append(dict(id=p["id"], q=p["q"], names=p.get("names", []),
+                               classify=_compile_code(p["cases"], p.get("fallback", "他"))))
+    name = pk.get("pack") or os.path.splitext(os.path.basename(path))[0]
+    return name, probes
+
 def _one(p, temp):
     try:
         if p.get("kind") == "text":
@@ -596,10 +708,15 @@ def run_probe(p, adaptive=True, max_n=15, band=(0.5, 0.85)):
 
 if __name__ == "__main__":
     tag = "thinking" if THINK else "nothink"
-    if args.domain == "io":
-        PROBES = PROBES_IO
+    if args.probes:
+        pack_name, PROBES = load_pack(args.probes)
+        print(f"(プローブパック: {pack_name} = {len(PROBES)}点)")
+    elif args.domain == "io":
+        pack_name = "io"; PROBES = PROBES_IO
     elif args.domain == "all":
-        PROBES = PROBES + PROBES_IO
+        pack_name = "all"; PROBES = PROBES + PROBES_IO
+    else:
+        pack_name = "code"
     if args.only:
         wanted = set(args.only.split(","))
         PROBES = [p for p in PROBES if p["id"] in wanted]
@@ -615,10 +732,10 @@ if __name__ == "__main__":
     import re as _re
     safe = _re.sub(r"[^A-Za-z0-9_.-]", "_", MODEL)
     part = "_partial" if args.only else ""
-    dom = "" if args.domain == "code" else f"_{args.domain}"
+    dom = "" if pack_name == "code" else f"_{pack_name}"
     outp = os.path.join(os.getcwd(), f"profile_{safe}_{tag}{dom}{part}.json")
     json.dump({"model": MODEL, "mode": tag, "N": N, "base": BASE, "api": args.api,
-               "domain": args.domain, "rows": rows},
+               "domain": pack_name, "rows": rows},
               open(outp, "w"), ensure_ascii=False, indent=1)
     print(f"\n[保存] {outp}")
     def _is_err(label):
@@ -637,3 +754,36 @@ if __name__ == "__main__":
     for r in rows:
         if not _is_err(r["default"]) and r["stability"] >= 0.8:
             print(f"  - {r['id']}: 既定=「{r['default']}」で安定。意図が同じなら書かなくてよい")
+
+    # ドリフト検知 (--assert): ベースラインと比較して回帰があれば exit 1
+    if args.assert_base:
+        base = json.load(open(args.assert_base))
+        bmap = {r["id"]: r for r in base["rows"]}
+        hard, soft, info = [], [], []
+        for r in rows:
+            b = bmap.get(r["id"])
+            if not b:
+                info.append(f"{r['id']}: ベースラインに無い判断点(新規)"); continue
+            r_err, b_err = _is_err(r["default"]), _is_err(b["default"])
+            if r_err and not b_err:
+                hard.append(f"{r['id']}: 実装不能化 「{b['default']}」→「{r['default']}」 {r['dist']}")
+            elif r["default"] != b["default"]:
+                if r["stability"] >= 0.8 and b["stability"] >= 0.8:
+                    hard.append(f"{r['id']}: 既定変化 「{b['default']}」(安定{b['stability']})"
+                                f"→「{r['default']}」(安定{r['stability']})")
+                else:
+                    soft.append(f"{r['id']}: 多数派が変化したが不安定圏 "
+                                f"「{b['default']}」({b['stability']})→「{r['default']}」({r['stability']})")
+            elif r["stability"] < 0.8 <= b["stability"]:
+                hard.append(f"{r['id']}: 安定性低下 {b['stability']}→{r['stability']} {r['dist']}")
+        missing = [i for i in bmap if i not in {r['id'] for r in rows}]
+        if missing:
+            info.append(f"未実行(ベースラインのみ): {', '.join(missing)}")
+        print(f"\n## ドリフト検知: ベースライン={base['model']} ({args.assert_base})")
+        for m in hard: print(f"  ★ {m}")
+        for m in soft: print(f"  △ {m}")
+        for m in info: print(f"  ・ {m}")
+        if hard:
+            print(f"\nDRIFT: ★{len(hard)}件 → 指示の書き換え・委譲可否の再判断が必要 (exit 1)")
+            sys.exit(1)
+        print(f"\nドリフトなし(★0件, △{len(soft)}件) (exit 0)")

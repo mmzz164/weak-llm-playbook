@@ -1,0 +1,147 @@
+{
+ "pack": "io_en",
+ "description": "English-language non-coding battery: structured output, extraction/interpretation, writing style, dialogue meta. Ported from the built-in Japanese io battery (txt_tone and txt_name_order are Japanese-specific and omitted). Probe ids match the Japanese battery so per-language profiles stay comparable within the same pack.",
+ "probes": [
+  {"id": "io_date_fmt", "kind": "text",
+   "q": "Extract the date from the following sentence and output ONLY a JSON object {\"date\": ...}.\nSentence: \"The meeting will be held on March 5, 2026.\"",
+   "classify": [
+    {"label": "ISO(zero-padded)", "json_field": "date", "value_regex": "^2026-03-05$"},
+    {"label": "slash/other numeric", "json_field": "date", "value_regex": "2026[/.]0?3[/.]0?5|0?3[/.]0?5[/.]2026"},
+    {"label": "as written (March 5, 2026)", "json_field": "date", "value_regex": "March"},
+    {"label": "other", "json_field": "date"}
+   ],
+   "fallback": "ERR:no-json"},
+
+  {"id": "io_missing_field", "kind": "text",
+   "q": "Using ONLY the information below, output a JSON object {\"name\": ..., \"age\": ..., \"email\": ...} and nothing else.\nInformation: name = John Smith",
+   "classify": [
+    {"label": "null-filled", "all": [{"json_field": "age", "is_null": true}, {"json_field": "email", "is_null": true}]},
+    {"label": "keys omitted", "all": [{"json_field": "age", "absent": true}, {"json_field": "email", "absent": true}]},
+    {"label": "empty strings", "all": [{"json_field": "age", "equals": ""}, {"json_field": "email", "equals": ""}]},
+    {"label": "values invented/other", "json_type": "dict"}
+   ],
+   "fallback": "ERR:no-json"},
+
+  {"id": "io_key_style", "kind": "text",
+   "q": "Design a JSON object for a book with its title, author name, release date, and price including tax. Output exactly one object with English keys and made-up values, JSON only.",
+   "classify": [
+    {"label": "snake_case", "regex": "\"[a-z0-9]+_[a-z0-9_]+\"\\s*:"},
+    {"label": "camelCase", "regex": "\"[a-z]+[A-Z][A-Za-z]*\"\\s*:"},
+    {"label": "single words/other", "json_type": "dict"}
+   ],
+   "fallback": "ERR:no-json"},
+
+  {"id": "io_num_unit", "kind": "text",
+   "q": "\"The price is $1,980.\" Output ONLY JSON {\"price\": ...}.",
+   "classify": [
+    {"label": "number (no unit)", "json_field": "price", "type": "number"},
+    {"label": "string with $", "json_field": "price", "value_regex": "\\$"},
+    {"label": "string number", "json_field": "price", "value_regex": "^[0-9,.]+$"},
+    {"label": "other", "json_field": "price"}
+   ],
+   "fallback": "ERR:no-json"},
+
+  {"id": "io_bool_style", "kind": "text",
+   "q": "\"The item is in stock.\" Output ONLY JSON {\"in_stock\": ...}.",
+   "classify": [
+    {"label": "bool(true)", "json_field": "in_stock", "equals": true},
+    {"label": "string", "json_field": "in_stock", "type": "string"},
+    {"label": "number(1)", "json_field": "in_stock", "equals": 1},
+    {"label": "other", "json_field": "in_stock"}
+   ],
+   "fallback": "ERR:no-json"},
+
+  {"id": "io_pure_json", "kind": "text",
+   "q": "Output the integers 1 through 5 as a JSON array.",
+   "classify": [
+    {"label": "raw JSON only", "json_parses": true},
+    {"label": "code-fenced", "regex": "\\A\\s*```"},
+    {"label": "with prose", "json_type": "list"},
+    {"label": "with prose", "json_type": "dict"}
+   ],
+   "fallback": "ERR:no-json"},
+
+  {"id": "io_extra_keys", "kind": "text",
+   "q": "Output ONLY JSON {\"username\": ...} for the username \"tanaka\".",
+   "classify": [
+    {"label": "specified key only", "json_only_keys": ["username"]},
+    {"label": "extra keys added", "json_type": "dict"}
+   ],
+   "fallback": "ERR:no-json"},
+
+  {"id": "io_date_ambig", "kind": "text",
+   "q": "Convert the date 01/02/2026 to YYYY-MM-DD format. Output only the converted date string.",
+   "classify": [
+    {"label": "MM/DD (Jan 2)", "contains": "2026-01-02"},
+    {"label": "DD/MM (Feb 1)", "contains": "2026-02-01"}
+   ],
+   "fallback": "other/not converted"},
+
+  {"id": "io_range_count", "kind": "text",
+   "q": "\"We need 3 to 5 units.\" Output ONLY JSON {\"count\": ...}.",
+   "classify": [
+    {"label": "lower bound (3)", "json_field": "count", "equals": 3},
+    {"label": "upper bound (5)", "json_field": "count", "equals": 5},
+    {"label": "midpoint (4)", "json_field": "count", "equals": 4},
+    {"label": "range kept", "json_field": "count", "type": "string"},
+    {"label": "range kept", "json_field": "count", "type": "list"}
+   ],
+   "fallback": "ERR:no-json"},
+
+  {"id": "io_csv_header", "kind": "text",
+   "q": "Output ONLY CSV for the following data.\nJohn is 30 years old, and Sara is 25.",
+   "classify": [
+    {"label": "header row", "regex": "(?i)\\A(```[a-z]*\\s*)?[^\\n]*\\b(name|age)\\b"},
+    {"label": "no header", "regex": "(?i)\\A(```[a-z]*\\s*)?[^\\n]*\\b(john|sara|30|25)\\b"}
+   ],
+   "fallback": "other"},
+
+  {"id": "txt_sum_lang", "kind": "text",
+   "q": "Summarize the following text in one sentence.\n\nリモートワークの普及により、企業のオフィス利用は大きく変化した。多くの企業が固定席を廃止し、フリーアドレス制を導入している。一方で、対面での偶発的な会話が減り、部門を越えた情報共有が難しくなったという調査結果もある。これを受けて、出社日を週2〜3日に固定するハイブリッド型の勤務制度を採用する企業が増えている。",
+   "classify": [
+    {"label": "input language (Japanese)", "regex": "(?s)(?:[ぁ-んァ-ヶ一-龠].*?){8,}"}
+   ],
+   "fallback": "instruction language (English)"},
+
+  {"id": "txt_sum_format", "kind": "text",
+   "q": "Summarize the following text.\n\nThe rise of remote work has significantly changed how companies use office space. Many firms have abolished fixed desks in favor of hot-desking. At the same time, surveys show that spontaneous face-to-face conversations have declined, making cross-departmental information sharing harder. In response, a growing number of companies are adopting hybrid schedules with two or three fixed office days per week, and some are redefining the office as a place for collaboration rather than solo work.",
+   "classify": [
+    {"label": "bullet points", "regex": "(?m)^\\s*([-*•]|\\d+[.)])"}
+   ],
+   "fallback": "prose"},
+
+  {"id": "txt_sum_length", "kind": "text",
+   "q": "Summarize the following text.\n\nThe rise of remote work has significantly changed how companies use office space. Many firms have abolished fixed desks in favor of hot-desking. At the same time, surveys show that spontaneous face-to-face conversations have declined, making cross-departmental information sharing harder. In response, a growing number of companies are adopting hybrid schedules with two or three fixed office days per week, and some are redefining the office as a place for collaboration rather than solo work.",
+   "classify": [
+    {"label": "1-2 sentences (<120 chars)", "len_lt": 120},
+    {"label": "short paragraph (<400 chars)", "len_lt": 400}
+   ],
+   "fallback": "long (>=400 chars)"},
+
+  {"id": "txt_units", "kind": "text",
+   "q": "Translate the following sentence into Spanish. Output only the translation.\n\"The package weighs 5 pounds.\"",
+   "classify": [
+    {"label": "both (converted + original)", "all": [{"regex": "(?i)libra"}, {"regex": "(?i)kilo|\\bkg\\b"}]},
+    {"label": "unit kept (pounds)", "regex": "(?i)libra|pound"},
+    {"label": "converted (kg)", "regex": "(?i)kilo|\\bkg\\b"}
+   ],
+   "fallback": "other"},
+
+  {"id": "txt_clarify", "kind": "text",
+   "q": "Sort the file list by date, newest first, and output it.",
+   "classify": [
+    {"label": "asks back (points out missing input)", "regex": "(?i)\\?|please (provide|share|paste)|which files|could you (provide|share)|need the (list|files)"},
+    {"label": "gives instructions/commands", "regex": "(?i)```|\\bls -|\\bsort\\b|command|explorer|finder"},
+    {"label": "fabricates data", "regex": "(?mi)(^.*\\.(txt|log|csv|pdf|docx?).*$\\n?){3,}"}
+   ],
+   "fallback": "other"},
+
+  {"id": "txt_list_style", "kind": "text",
+   "q": "Output five steps for brewing good coffee.",
+   "classify": [
+    {"label": "numbered (1.)", "regex": "(?m)^\\s*\\d+[.)]"},
+    {"label": "bullets (-/*)", "regex": "(?m)^\\s*[-*•]"}
+   ],
+   "fallback": "prose"}
+ ]
+}

@@ -27,6 +27,9 @@ English version: [README.md](README.md)
 - `--domain io`(18点): コーディング以外 — 構造化出力(JSON/CSV)・抽出解釈・文章スタイル・
   対話メタ(情報不足時に逆質問するか進めるか)— 出力テキストを決定論分類
 - `--domain all`: 両方
+- `--probes pack.json`: **独自バッテリーをJSONで宣言的に定義**(本体のコード変更不要)。
+  ルールは regex/contains/長さ・JSONパース/フィールド照合・実行コードの結果/例外ケースに対応。
+  `packs/io_en.json`(ioバッテリーの英語版)がリファレンス実例を兼ねる。
 
 ```bash
 # OpenAI互換エンドポイント (vLLM / llama.cpp / ollama / OpenAI API)
@@ -40,11 +43,19 @@ python3 skill/weak-llm-playbook/scripts/default_probe.py Qwen3.6-27B http://loca
 # Anthropic Messages形式 (Anthropic API / claude-code-router)
 python3 skill/weak-llm-playbook/scripts/default_probe.py claude-haiku-4-5 https://api.anthropic.com 5 nothink --api anthropic
 
-# モデル間diff = 「モデルを替えたら指示のどこを書き換えるか」
+# モデル間diff = 「モデルを替えたら指示のどこを書き換えるか」(2個以上=行列比較も可)
 python3 skill/weak-llm-playbook/scripts/default_probe.py --diff profileA.json profileB.json
 
 # コーディング以外バッテリー(構造化出力/抽出/文章スタイル)
 python3 skill/weak-llm-playbook/scripts/default_probe.py http://localhost:8000 5 --domain io
+
+# JSONパックによる独自バッテリー(英語版ioバッテリーを例として同梱)
+python3 skill/weak-llm-playbook/scripts/default_probe.py http://localhost:8000 5 --probes packs/io_en.json
+
+# ドリフト検知(CI・モデル更新の回帰テスト): ベースラインに対して既定変化・
+# 安定性低下・実装不能化があれば exit 1
+python3 skill/weak-llm-playbook/scripts/default_probe.py http://localhost:8000 5 --domain io \
+        --assert profiles/profile_Qwen3.6-27B-NVFP4_nothink_io.json
 ```
 
 ioバッテリーの実測例(Qwen3.6-27B, すべて**安定した**既定 — 揺れないぶん意図とのズレに
@@ -59,6 +70,11 @@ ioバッテリーでもモデル間 `--diff` は成立 — Qwen3.6-27B vs Phi-3.
 最大の差は安全性に直結: 欠損フィールドをQwenは安定して `null` にするが、**Phiは値を捏造**する
 (範囲「3〜5個」も中央4→下限3に入れ替わる — どちらも安定なので、モデルを替えると
 抽出データが黙って変わる)。
+
+さらに既定は**プロンプトの言語**にも依存する: 同じQwen3.6でも、日付抽出は日本語プロンプト
+ならISOで安定(0.86)なのに、英語プロンプトではISOと「原文のまま」の五分五分(0.53)。
+範囲「3 to 5」も中央値安定→中央値vs範囲保持に割れる。**委譲で実際に使う言語で測るべき**で、
+そのために `--probes packs/io_en.json` がある。
 
 出力は4分類:
 - **実装不能**(多数派がエラー)→ 明示しても救えない。委譲回避

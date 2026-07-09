@@ -1,0 +1,175 @@
+{
+ "model": "Qwen3.6-27B-NVFP4",
+ "mode": "nothink",
+ "N": 5,
+ "base": "http://localhost:8000",
+ "api": "openai",
+ "domain": "io_en",
+ "rows": [
+  {
+   "id": "io_date_fmt",
+   "default": "as written (March 5, 2026)",
+   "stability": 0.53,
+   "n": 15,
+   "dist": {
+    "as written (March 5, 2026)": 8,
+    "ISO(zero-padded)": 7
+   },
+   "canonical": "as written (March 5, 2026)"
+  },
+  {
+   "id": "io_missing_field",
+   "default": "null-filled",
+   "stability": 1.0,
+   "n": 5,
+   "dist": {
+    "null-filled": 5
+   },
+   "canonical": "null-filled"
+  },
+  {
+   "id": "io_key_style",
+   "default": "camelCase",
+   "stability": 1.0,
+   "n": 5,
+   "dist": {
+    "camelCase": 5
+   },
+   "canonical": "camelCase"
+  },
+  {
+   "id": "io_num_unit",
+   "default": "number (no unit)",
+   "stability": 1.0,
+   "n": 5,
+   "dist": {
+    "number (no unit)": 5
+   },
+   "canonical": "number (no unit)"
+  },
+  {
+   "id": "io_bool_style",
+   "default": "bool(true)",
+   "stability": 1.0,
+   "n": 5,
+   "dist": {
+    "bool(true)": 5
+   },
+   "canonical": "bool(true)"
+  },
+  {
+   "id": "io_pure_json",
+   "default": "code-fenced",
+   "stability": 1.0,
+   "n": 5,
+   "dist": {
+    "code-fenced": 5
+   },
+   "canonical": "code-fenced"
+  },
+  {
+   "id": "io_extra_keys",
+   "default": "specified key only",
+   "stability": 1.0,
+   "n": 5,
+   "dist": {
+    "specified key only": 5
+   },
+   "canonical": "specified key only"
+  },
+  {
+   "id": "io_date_ambig",
+   "default": "MM/DD (Jan 2)",
+   "stability": 1.0,
+   "n": 5,
+   "dist": {
+    "MM/DD (Jan 2)": 5
+   },
+   "canonical": "MM/DD (Jan 2)"
+  },
+  {
+   "id": "io_range_count",
+   "default": "range kept",
+   "stability": 0.53,
+   "n": 15,
+   "dist": {
+    "midpoint (4)": 7,
+    "range kept": 8
+   },
+   "canonical": "midpoint (4)"
+  },
+  {
+   "id": "io_csv_header",
+   "default": "header row",
+   "stability": 0.86,
+   "n": 7,
+   "dist": {
+    "header row": 6,
+    "no header": 1
+   },
+   "canonical": "header row"
+  },
+  {
+   "id": "txt_sum_lang",
+   "default": "input language (Japanese)",
+   "stability": 1.0,
+   "n": 5,
+   "dist": {
+    "input language (Japanese)": 5
+   },
+   "canonical": "input language (Japanese)"
+  },
+  {
+   "id": "txt_sum_format",
+   "default": "prose",
+   "stability": 1.0,
+   "n": 5,
+   "dist": {
+    "prose": 5
+   },
+   "canonical": "prose"
+  },
+  {
+   "id": "txt_sum_length",
+   "default": "short paragraph (<400 chars)",
+   "stability": 0.73,
+   "n": 15,
+   "dist": {
+    "short paragraph (<400 chars)": 11,
+    "long (>=400 chars)": 4
+   },
+   "canonical": "short paragraph (<400 chars)"
+  },
+  {
+   "id": "txt_units",
+   "default": "unit kept (pounds)",
+   "stability": 1.0,
+   "n": 5,
+   "dist": {
+    "unit kept (pounds)": 5
+   },
+   "canonical": "unit kept (pounds)"
+  },
+  {
+   "id": "txt_clarify",
+   "default": "asks back (points out missing input)",
+   "stability": 0.53,
+   "n": 15,
+   "dist": {
+    "asks back (points out missing input)": 8,
+    "gives instructions/commands": 7
+   },
+   "canonical": "asks back (points out missing input)"
+  },
+  {
+   "id": "txt_list_style",
+   "default": "numbered (1.)",
+   "stability": 1.0,
+   "n": 5,
+   "dist": {
+    "numbered (1.)": 5
+   },
+   "canonical": "numbered (1.)"
+  }
+ ]
+}

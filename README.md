@@ -35,6 +35,10 @@ default the model chose. Two batteries (50 decision points total):
   extraction/interpretation, writing style, and dialogue meta-behavior (ask back vs
   proceed on missing info) — classified deterministically from the output text
 - `--domain all`: both
+- `--probes pack.json`: **your own battery**, defined declaratively in JSON — no code
+  changes needed. Rules cover regex/contains/length checks, JSON parsing and field
+  matchers, and result/exception cases for executed code. `packs/io_en.json` (the English
+  port of the io battery) doubles as the reference example.
 
 ```bash
 # OpenAI-compatible endpoint (vLLM / llama.cpp / ollama / OpenAI API)
@@ -49,10 +53,19 @@ python3 skill/weak-llm-playbook/scripts/default_probe.py Qwen3.6-27B http://loca
 python3 skill/weak-llm-playbook/scripts/default_probe.py claude-haiku-4-5 https://api.anthropic.com 5 nothink --api anthropic
 
 # Cross-model diff = "what to rewrite in your instructions when switching models"
+# (accepts 2+ profiles — pass 3 or more for a model matrix)
 python3 skill/weak-llm-playbook/scripts/default_probe.py --diff profileA.json profileB.json
 
 # Non-coding battery (structured output / extraction / writing style)
 python3 skill/weak-llm-playbook/scripts/default_probe.py http://localhost:8000 5 --domain io
+
+# Custom battery from a JSON pack (English io battery ships as an example)
+python3 skill/weak-llm-playbook/scripts/default_probe.py http://localhost:8000 5 --probes packs/io_en.json
+
+# Drift check for CI / model upgrades: exit 1 if defaults changed, stability dropped,
+# or a probe became not-implementable vs. the baseline profile
+python3 skill/weak-llm-playbook/scripts/default_probe.py http://localhost:8000 5 --domain io \
+        --assert profiles/profile_Qwen3.6-27B-NVFP4_nothink_io.json
 ```
 
 Sample findings from the io battery (Qwen3.6-27B, all *stable* defaults — the dangerous
@@ -68,6 +81,12 @@ Cross-model `--diff` works on the io battery too — Qwen3.6-27B vs Phi-3.5-mini
 6/18 points, and the biggest one is a safety issue: on missing fields Qwen stably emits
 `null`, while **Phi invents values** (and the "3–5 items" range flips from midpoint-4 to
 lower-bound-3 — both stable, so switching models silently changes your extracted data).
+
+Defaults also depend on the **prompt language**: on the same Qwen3.6, date extraction is
+stably ISO with Japanese prompts (0.86) but a coin flip between ISO and "as written" with
+English prompts (0.53), and the 3-to-5 range flips from stable-midpoint to
+midpoint-vs-range-kept. Measure your profile in the language you actually delegate in —
+that is exactly what `--probes packs/io_en.json` is for.
 
 The report has four categories:
 - **Not implementable** (majority of runs error) → explicitness can't save it; avoid delegation
