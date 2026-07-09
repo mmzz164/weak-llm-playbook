@@ -21,7 +21,12 @@ English version: [README.md](README.md)
 
 ### 1. `default_probe.py` — モデルの既定挙動プロファイラ
 
-「1点だけ未指定の極小タスク」を32判断点×N回投げ、生成コードを**実行**してどの既定を選んだか分類。
+「1点だけ未指定の極小タスク」をN回投げ、どの既定を選んだか分類。2バッテリー計50判断点:
+
+- `--domain code`(既定, 32点): 生成コードを**実行**して分類
+- `--domain io`(18点): コーディング以外 — 構造化出力(JSON/CSV)・抽出解釈・文章スタイル・
+  対話メタ(情報不足時に逆質問するか進めるか)— 出力テキストを決定論分類
+- `--domain all`: 両方
 
 ```bash
 # OpenAI互換エンドポイント (vLLM / llama.cpp / ollama / OpenAI API)
@@ -37,7 +42,18 @@ python3 skill/weak-llm-playbook/scripts/default_probe.py claude-haiku-4-5 https:
 
 # モデル間diff = 「モデルを替えたら指示のどこを書き換えるか」
 python3 skill/weak-llm-playbook/scripts/default_probe.py --diff profileA.json profileB.json
+
+# コーディング以外バッテリー(構造化出力/抽出/文章スタイル)
+python3 skill/weak-llm-playbook/scripts/default_probe.py http://localhost:8000 5 --domain io
 ```
+
+ioバッテリーの実測例(Qwen3.6-27B, すべて**安定した**既定 — 揺れないぶん意図とのズレに
+気づけない、いちばん危険な種類):
+
+- 「3〜5個」→ **中央値4を発明**して抽出(下限でも上限でもない)
+- 「JSONで出力」→ 常に```フェンス付き(`json.loads` へのパイプ直結が壊れる)
+- 英語の指示+日本語の本文 → **日本語**で応答
+- 情報不足時: 逆質問と一般論回答が真の五分五分(ただし捏造は0)→ どちらを望むか必ず明示
 
 出力は4分類:
 - **実装不能**(多数派がエラー)→ 明示しても救えない。委譲回避
@@ -64,6 +80,20 @@ python3 skill/weak-llm-playbook/scripts/spec_holes.py examples/draft_topn.txt to
  - top_n([], 3) → []
 実装不能率 1/5
 ```
+
+**抽出モード(`--kind json`)** — コードを介さないタスク(抽出・整形・分類)用。
+同じ指示を入力文書ごとにK回実行し、JSON出力を**フィールド単位**で比較。
+実装不能率の代わりにパース失敗率を見る:
+
+```bash
+python3 skill/weak-llm-playbook/scripts/spec_holes.py examples/draft_extract.txt - \
+        http://localhost:8000 5 examples/docs_extract.json --kind json
+```
+
+実測結果(問い合わせメールの抽出, Qwen3.6-27B): `quantity` の**型**が不安定
+(文字列 `"3〜5個"` vs 素の数値)で発散を検出。さらに顧客名は5/5全実行が
+**差出人ではなく宛名**に収束 — 安定して、安定したまま間違う。[合意]リストは
+まさにこれを捕まえるためにある。
 
 ### 3. Claude Code スキル
 

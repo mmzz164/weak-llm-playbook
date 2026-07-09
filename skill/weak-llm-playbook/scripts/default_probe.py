@@ -7,6 +7,8 @@
   例: python3 default_probe.py Qwen3.6-27B-NVFP4 http://localhost:8000 5
   model省略時(openai互換のみ): /v1/models から自動検出
   例: python3 default_probe.py "" http://localhost:8000 5   ← ""でも省略でも可
+  --domain io で「コーディング以外」の判断点(構造化出力・抽出・文章・対話メタ)を測定。
+  --domain all で両バッテリー。既定は code(従来の32点)。
 """
 import sys, json, re, urllib.request, types
 
@@ -37,7 +39,7 @@ if len(sys.argv) > 1 and sys.argv[1] == "--diff":
 
 import argparse, os
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from llm_client import LLMClient, detect_model
+from llm_client import LLMClient, detect_model, find_json
 
 ap = argparse.ArgumentParser(description="既定プローブ(任意エンドポイント対応)")
 ap.add_argument("model", nargs="?", default=None,
@@ -49,6 +51,8 @@ ap.add_argument("--api", choices=["openai", "anthropic"], default="openai",
                 help="エンドポイント形式 (既定: openai互換 /v1/chat/completions)")
 ap.add_argument("--key", default=None, help="APIキー (省略時 PROBE_API_KEY/ANTHROPIC_API_KEY/OPENAI_API_KEY)")
 ap.add_argument("--only", default=None, help="実行する判断点をカンマ区切りで限定 (例: missing_key,range_incl)")
+ap.add_argument("--domain", choices=["code", "io", "all"], default="code",
+                help="判断点バッテリー: code=コーディング(既定) / io=構造化出力・抽出・文章 / all=両方")
 _argv = sys.argv[1:]
 if _argv and _argv[0].startswith(("http://", "https://")):
     _argv.insert(0, "")   # 先頭がURL = model省略とみなし繰り上げ
@@ -64,9 +68,12 @@ if not MODEL:
 THINK = args.mode in ("1", "think", "true")
 CLIENT = LLMClient(MODEL, BASE, api=args.api, key=args.key, think=THINK)
 
-def gen(prompt, temperature):
-    return CLIENT.chat(prompt + "\nコードのみ出力。説明・テスト不要。",
-                       temperature=temperature, max_tokens=2000 if THINK else 400)
+def gen(prompt, temperature, code=True):
+    if code:
+        return CLIENT.chat(prompt + "\nコードのみ出力。説明・テスト不要。",
+                           temperature=temperature, max_tokens=2000 if THINK else 400)
+    # textプローブ: 出力指示はプローブ文自身が持つ。要約・返信が切れないよう上限は広め
+    return CLIENT.chat(prompt, temperature=temperature, max_tokens=2000 if THINK else 600)
 
 def extract_code(text):
     m = re.search(r"```(?:python)?\s*(.*?)```", text, re.S)
@@ -379,8 +386,193 @@ def _p_sort_mixed(f):
         return f"他/成功({r})"
     except Exception as e: return f"例外({type(e).__name__})"
 
+# ==== io バッテリー: コーディング以外の判断点(構造化出力・抽出・文章・対話メタ) ====
+# kind="text": 生成コードの実行ではなく、出力テキストそのものを決定論的に分類する。
+
+_find_json = find_json   # llm_client.find_json を共用
+
+def _strip_fence(text):
+    m = re.search(r"```[a-z]*\s*(.*?)```", text, re.S)
+    return (m.group(1) if m else text).strip()
+
+def _io_date(t):
+    j = _find_json(t)
+    v = str(j.get("date")) if isinstance(j, dict) and j.get("date") is not None else None
+    if v is None: return "JSON不成立/キー欠落"
+    if v == "2026-03-05": return "ISO(0埋め)"
+    if re.match(r"2026[/.]0?3[/.]0?5", v): return "スラッシュ等"
+    if "3月5日" in v: return "和文のまま"
+    return f"他({v[:20]})"
+
+def _io_missing(t):
+    j = _find_json(t)
+    if not isinstance(j, dict): return "JSON不成立"
+    if "age" not in j and "email" not in j: return "キー省略"
+    vals = [j.get("age"), j.get("email")]
+    if all(v is None for v in vals): return "null埋め"
+    if all(v == "" for v in vals if v is not None): return "空文字埋め"
+    return "値を発明/他"
+
+def _io_keys(t):
+    j = _find_json(t)
+    if not isinstance(j, dict) or not j: return "JSON不成立"
+    ks = list(j.keys())
+    if any("_" in k for k in ks): return "snake_case"
+    if any(re.search(r"[a-z][A-Z]", k) for k in ks): return "camelCase"
+    return "単語のみ/他"
+
+def _io_price(t):
+    j = _find_json(t)
+    v = j.get("price") if isinstance(j, dict) else None
+    if isinstance(v, (int, float)): return "数値(単位なし)"
+    if isinstance(v, str):
+        if "円" in v: return "文字列(単位つき)"
+        if v.replace(",", "").isdigit(): return "文字列(数値)"
+    return "JSON不成立/他"
+
+def _io_bool(t):
+    j = _find_json(t)
+    v = j.get("in_stock") if isinstance(j, dict) else None
+    if v is True: return "bool(true)"
+    if isinstance(v, str): return f"文字列({v[:10]})"
+    if v == 1: return "数値(1)"
+    return "JSON不成立/他"
+
+def _io_pure(t):
+    s = t.strip()
+    try:
+        json.loads(s); return "生JSONのみ"
+    except Exception:
+        pass
+    if s.startswith("```"): return "コードフェンス付き"
+    if _find_json(s) is not None: return "説明文つき"
+    return "JSONなし"
+
+def _io_extra(t):
+    j = _find_json(t)
+    if not isinstance(j, dict): return "JSON不成立"
+    return "指定キーのみ" if set(j.keys()) == {"username"} else "キー追加"
+
+def _io_dambig(t):
+    if "2026-01-02" in t: return "MM/DD解釈(1月2日)"
+    if "2026-02-01" in t: return "DD/MM解釈(2月1日)"
+    return "他/変換せず"
+
+def _io_range(t):
+    j = _find_json(t)
+    v = j.get("count") if isinstance(j, dict) else None
+    if v == 3: return "下限(3)"
+    if v == 5: return "上限(5)"
+    if v == 4: return "中央(4)"
+    if isinstance(v, (list, str)): return "範囲のまま"
+    return "JSON不成立/他"
+
+def _io_csv(t):
+    body = _strip_fence(t)
+    lines = [l for l in body.splitlines() if l.strip()]
+    if not lines: return "出力なし"
+    first = lines[0]
+    if re.search(r"名前|氏名|name|年齢|age", first, re.I): return "ヘッダあり"
+    if re.search(r"田中|佐藤|30|25", first): return "ヘッダなし"
+    return "他"
+
+_SUM_SRC = ("リモートワークの普及により、企業のオフィス利用は大きく変化した。多くの企業が固定席を廃止し、"
+            "フリーアドレス制を導入している。一方で、対面での偶発的な会話が減り、部門を越えた情報共有が"
+            "難しくなったという調査結果もある。これを受けて、出社日を週2〜3日に固定するハイブリッド型の"
+            "勤務制度を採用する企業が増えている。また、オフィスの役割を「作業の場」から「協働の場」へ"
+            "再定義する動きも見られる。")
+
+def _txt_lang(t):
+    ja = len(re.findall(r"[ぁ-んァ-ヶ一-龠]", t))
+    en = len(re.findall(r"[A-Za-z]", t))
+    return "入力言語(日本語)で応答" if ja > en else "指示言語(英語)で応答"
+
+def _txt_fmt(t):
+    if re.search(r"^\s*([-・*•]|\d+[.)]|[①-⑩])", t, re.M): return "箇条書き"
+    return "散文"
+
+def _txt_len(t):
+    n = len(t.strip())
+    if n < 80: return "1〜2文(80字未満)"
+    if n < 240: return "短段落(240字未満)"
+    return "長文(240字以上)"
+
+def _txt_tone(t):
+    return "敬語" if len(re.findall(r"です|ます|ました|ません|ございます|ください", t)) >= 2 else "カジュアル"
+
+def _txt_name(t):
+    lo = t.lower()
+    it, iy = lo.find("taro"), lo.find("yamada")
+    if it < 0 or iy < 0: return "他/ローマ字なし"
+    return "名-姓(Taro Yamada)" if it < iy else "姓-名(Yamada Taro)"
+
+def _txt_units(t):
+    lb = "ポンド" in t
+    kg = re.search(r"kg|キロ", t) is not None
+    if lb and kg: return "併記"
+    if lb: return "単位そのまま(ポンド)"
+    if kg: return "換算(kg)"
+    return "他"
+
+def _txt_clarify(t):
+    if re.search(r"[??]|教えて|提供|共有|貼り付け|お知らせ", t) and re.search(r"一覧|ファイル|リスト|データ", t):
+        return "逆質問(不足を指摘)"
+    if re.search(r"```|ls\s+-|sort\b|コマンド", t): return "手順/コマンドを答える"
+    if len([l for l in t.splitlines() if re.match(r"\s*([-・*\d]|\S+\.(txt|log|csv|pdf))", l)]) >= 3:
+        return "架空データで進める"
+    return "他"
+
+def _txt_list(t):
+    m = re.search(r"^\s*(\d+[.)]|[①-⑩]|[-・*•])", t, re.M)
+    if not m: return "散文"
+    h = m.group(1)
+    if h in "①②③④⑤⑥⑦⑧⑨⑩": return "丸数字"   # "①".isdigit()==True なので先に判定
+    if h[0].isdigit(): return "番号付き(1.)"
+    return "記号(-/・)"
+
+PROBES_IO = [
+    dict(id="io_date_fmt", kind="text", classify=_io_date,
+         q='次の文から日付を抜き出し、JSONオブジェクト {"date": ...} のみを出力してください。\n文: 「会議は2026年3月5日に開催します」'),
+    dict(id="io_missing_field", kind="text", classify=_io_missing,
+         q='次の情報だけを使って JSON {"name": ..., "age": ..., "email": ...} のみを出力してください。\n情報: 名前=田中太郎'),
+    dict(id="io_key_style", kind="text", classify=_io_keys,
+         q='書籍の「タイトル・著者名・発売日・税込価格」を持つJSONオブジェクトを、キーを英語にして架空の値で1件のみ出力してください。'),
+    dict(id="io_num_unit", kind="text", classify=_io_price,
+         q='「価格は1980円です」を JSON {"price": ...} のみで出力してください。'),
+    dict(id="io_bool_style", kind="text", classify=_io_bool,
+         q='「在庫あり」という状態を JSON {"in_stock": ...} のみで出力してください。'),
+    dict(id="io_pure_json", kind="text", classify=_io_pure,
+         q='1から5までの整数の配列をJSONで出力してください。'),
+    dict(id="io_extra_keys", kind="text", classify=_io_extra,
+         q='ユーザー名 "tanaka" を JSON {"username": ...} のみで出力してください。'),
+    dict(id="io_date_ambig", kind="text", classify=_io_dambig,
+         q='日付 01/02/2026 を YYYY-MM-DD 形式に変換し、変換後の日付文字列のみを出力してください。'),
+    dict(id="io_range_count", kind="text", classify=_io_range,
+         q='「3〜5個必要です」の個数を JSON {"count": ...} のみで出力してください。'),
+    dict(id="io_csv_header", kind="text", classify=_io_csv,
+         q='次のデータをCSVのみで出力してください。\n田中は30歳、佐藤は25歳。'),
+    dict(id="txt_sum_lang", kind="text", classify=_txt_lang,
+         q="Summarize the following text in one sentence.\n\n" + _SUM_SRC),
+    dict(id="txt_sum_format", kind="text", classify=_txt_fmt,
+         q="次の文章を要約してください。\n\n" + _SUM_SRC),
+    dict(id="txt_sum_length", kind="text", classify=_txt_len,
+         q="次の文章を要約してください。\n\n" + _SUM_SRC),
+    dict(id="txt_tone", kind="text", classify=_txt_tone,
+         q='次のメッセージに返信を書いてください。\n「明日の打ち合わせ、15時からに変更できますか?」'),
+    dict(id="txt_name_order", kind="text", classify=_txt_name,
+         q='氏名「山田太郎」をローマ字表記にして、その表記のみを出力してください。'),
+    dict(id="txt_units", kind="text", classify=_txt_units,
+         q='次の英文を日本語に翻訳し、翻訳文のみを出力してください。\nThe package weighs 5 pounds.'),
+    dict(id="txt_clarify", kind="text", classify=_txt_clarify,
+         q='ファイル一覧を日付の新しい順に並べ替えて出力してください。'),
+    dict(id="txt_list_style", kind="text", classify=_txt_list,
+         q='おいしいコーヒーの淹れ方の手順を5つ出力してください。'),
+]
+
 def _one(p, temp):
     try:
+        if p.get("kind") == "text":
+            return p["classify"](gen(p["q"], temp, code=False))
         code = extract_code(gen(p["q"], temp))
         fn, err = load_fn(code, p["names"])
         return err if fn is None else p["classify"](fn)
@@ -404,6 +596,10 @@ def run_probe(p, adaptive=True, max_n=15, band=(0.5, 0.85)):
 
 if __name__ == "__main__":
     tag = "thinking" if THINK else "nothink"
+    if args.domain == "io":
+        PROBES = PROBES_IO
+    elif args.domain == "all":
+        PROBES = PROBES + PROBES_IO
     if args.only:
         wanted = set(args.only.split(","))
         PROBES = [p for p in PROBES if p["id"] in wanted]
@@ -419,12 +615,15 @@ if __name__ == "__main__":
     import re as _re
     safe = _re.sub(r"[^A-Za-z0-9_.-]", "_", MODEL)
     part = "_partial" if args.only else ""
-    outp = os.path.join(os.getcwd(), f"profile_{safe}_{tag}{part}.json")
-    json.dump({"model": MODEL, "mode": tag, "N": N, "base": BASE, "api": args.api, "rows": rows},
+    dom = "" if args.domain == "code" else f"_{args.domain}"
+    outp = os.path.join(os.getcwd(), f"profile_{safe}_{tag}{dom}{part}.json")
+    json.dump({"model": MODEL, "mode": tag, "N": N, "base": BASE, "api": args.api,
+               "domain": args.domain, "rows": rows},
               open(outp, "w"), ensure_ascii=False, indent=1)
     print(f"\n[保存] {outp}")
     def _is_err(label):
-        return any(label.startswith(x) for x in ("EXEC_ERR", "RUN_ERR", "NO_FUNC", "LOAD_ERR", "ERR"))
+        return (any(label.startswith(x) for x in ("EXEC_ERR", "RUN_ERR", "NO_FUNC", "LOAD_ERR", "ERR"))
+                or label.startswith("JSON不成立") or label == "JSONなし" or label == "出力なし")
     # 明示が必要な判断点 = 安定性が低い(揺れる)= モデルが既定を持っていない
     print("\n## 実装不能な判断点(多数派がエラー = このモデルはこの種のタスク自体が不安定)")
     for r in rows:

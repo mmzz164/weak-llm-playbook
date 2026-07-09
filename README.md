@@ -27,8 +27,14 @@ Full experiment log: [docs/FINDINGS.md](docs/FINDINGS.md).
 
 ### 1. `default_probe.py` — default-behavior profiler
 
-Sends 32 decision points × N runs of "minimal tasks with exactly one unspecified decision",
-**executes** the generated code, and classifies which default the model chose.
+Sends "minimal tasks with exactly one unspecified decision" × N runs and classifies which
+default the model chose. Two batteries (50 decision points total):
+
+- `--domain code` (default, 32 points): **executes** the generated code to classify
+- `--domain io` (18 points): non-coding decisions — structured output (JSON/CSV),
+  extraction/interpretation, writing style, and dialogue meta-behavior (ask back vs
+  proceed on missing info) — classified deterministically from the output text
+- `--domain all`: both
 
 ```bash
 # OpenAI-compatible endpoint (vLLM / llama.cpp / ollama / OpenAI API)
@@ -44,7 +50,19 @@ python3 skill/weak-llm-playbook/scripts/default_probe.py claude-haiku-4-5 https:
 
 # Cross-model diff = "what to rewrite in your instructions when switching models"
 python3 skill/weak-llm-playbook/scripts/default_probe.py --diff profileA.json profileB.json
+
+# Non-coding battery (structured output / extraction / writing style)
+python3 skill/weak-llm-playbook/scripts/default_probe.py http://localhost:8000 5 --domain io
 ```
+
+Sample findings from the io battery (Qwen3.6-27B, all *stable* defaults — the dangerous
+kind, because they never waver and silently mismatch your intent):
+
+- "3〜5個" (3 to 5 items) → extracts the **invented midpoint 4** — neither bound
+- "output as JSON" → always wrapped in a ```code fence``` (piping to `json.loads` breaks)
+- English instruction + Japanese source text → responds in **Japanese**
+- On missing info: a genuine 50/50 coin flip between asking back and answering with
+  generic instructions (never fabricates, though) → always specify which you want
 
 The report has four categories:
 - **Not implementable** (majority of runs error) → explicitness can't save it; avoid delegation
@@ -74,6 +92,20 @@ python3 skill/weak-llm-playbook/scripts/spec_holes.py examples/draft_topn.txt to
  - top_n([], 3) → []
 not-implementable rate: 1/5
 ```
+
+**Extraction mode (`--kind json`)** — for non-coding tasks (extraction, reformatting,
+classification). Runs the same instruction K times per input document and diffs the JSON
+outputs **field by field**; the parse-failure rate replaces the not-implementable rate:
+
+```bash
+python3 skill/weak-llm-playbook/scripts/spec_holes.py examples/draft_extract.txt - \
+        http://localhost:8000 5 examples/docs_extract.json --kind json
+```
+
+Real result (customer-inquiry extraction on Qwen3.6-27B): the `quantity` field's *type*
+was unstable (`"3〜5個"` string vs bare number), and the customer name converged 5/5 on
+the **addressee instead of the sender** — stable, and stably wrong. The consensus list
+exists precisely so you catch that.
 
 ### 3. Claude Code skill
 

@@ -9,13 +9,41 @@
   - anthropic: temperature非対応モデル(Fable5/Opus4.7+等)は400を検知して外し再試行
 detect_model(base): GET /v1/models で配信中モデルを自動検出(model引数の省略用)。
 """
-import json, os, urllib.request, urllib.error
+import json, os, re as _re, urllib.request, urllib.error
 
 
 def _resolve_key(key=None):
     return (key or os.environ.get("PROBE_API_KEY")
             or os.environ.get("ANTHROPIC_API_KEY")
             or os.environ.get("OPENAI_API_KEY"))
+
+
+def find_json(text):
+    """テキストからJSON値を抽出してparse(生/```フェンス/前後に説明文があっても拾う)。失敗はNone。"""
+    t = text.strip()
+    m = _re.search(r"```(?:json)?\s*(.*?)```", t, _re.S)
+    if m:
+        t = m.group(1).strip()
+    try:
+        return json.loads(t)
+    except Exception:
+        pass
+    for oc, cc in (("{", "}"), ("[", "]")):
+        i = t.find(oc)
+        if i < 0:
+            continue
+        depth = 0
+        for j in range(i, len(t)):
+            if t[j] == oc:
+                depth += 1
+            elif t[j] == cc:
+                depth -= 1
+                if depth == 0:
+                    try:
+                        return json.loads(t[i:j + 1])
+                    except Exception:
+                        break
+    return None
 
 
 def detect_model(base, key=None):

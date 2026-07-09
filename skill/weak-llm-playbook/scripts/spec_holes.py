@@ -20,13 +20,17 @@
                   返して失敗しうるため、発注側供給が確実)
   例) python3 spec_holes.py draft.txt top_n Qwen3.6-27B-NVFP4 http://localhost:8000 5 probe_inputs.json
   model省略時(openai互換のみ): /v1/models から自動検出。"" をプレースホルダにしてもよい
+
+  --kind json : コードを介さない抽出・整形タスク用。inputs.json は入力テキスト(文字列)の配列。
+    各入力に同じ指示を K 回実行し、JSON出力のフィールド単位で発散=仕様の穴を検出する。
+  例) python3 spec_holes.py draft_extract.txt - http://localhost:8000 5 docs.json --kind json
 """
 import sys, json, re, types, urllib.request
 from collections import Counter
 
 import argparse, os
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from llm_client import LLMClient, detect_model
+from llm_client import LLMClient, detect_model, find_json
 
 ap = argparse.ArgumentParser(description="タスク駆動スペック穴検出(任意エンドポイント対応)")
 ap.add_argument("task_file")
@@ -38,6 +42,9 @@ ap.add_argument("k",     nargs="?", type=int, default=5)
 ap.add_argument("inputs", nargs="?", default=None, help="発注側プローブ入力のJSONファイル(推奨)")
 ap.add_argument("--api", choices=["openai", "anthropic"], default="openai")
 ap.add_argument("--key", default=None)
+ap.add_argument("--kind", choices=["code", "json"], default="code",
+                help="code=関数実装(既定) / json=抽出・構造化タスク: 各入力テキストにK回実行し"
+                     "JSON出力のフィールド単位で発散を検出(fn_name は '-' でよい)")
 _argv = sys.argv[1:]
 if len(_argv) > 2 and _argv[2].startswith(("http://", "https://")):
     _argv.insert(2, "")   # 第3引数がURL = model省略とみなし繰り上げ
@@ -56,6 +63,69 @@ CLIENT = LLMClient(MODEL, BASE, api=args.api, key=args.key, think=False)
 
 def gen(prompt, temperature, max_tokens=600):
     return CLIENT.chat(prompt, temperature=temperature, max_tokens=max_tokens)
+
+# ==== 抽出モード (--kind json) ====
+# コードを介さないタスク(抽出・整形・分類)向け。各入力テキストに同じ指示を K 回実行し、
+# JSON出力をフィールド単位で比較。実行間で値が割れたフィールド = 指示に書いていない仕様。
+if args.kind == "json":
+    if not args.inputs:
+        print("!! --kind json では inputs.json(入力テキスト文字列の配列)が必須"); sys.exit(2)
+    texts = json.load(open(args.inputs))
+    if not (isinstance(texts, list) and texts and all(isinstance(x, str) for x in texts)):
+        print("!! inputs.json は文字列(入力テキスト)の配列にしてください"); sys.exit(2)
+    print(f"# スペック穴検出(抽出モード): model={MODEL} K={K} 入力{len(texts)}件")
+
+    total = bad = 0
+    per_input = []
+    for doc in texts:
+        outs = []
+        for k in range(K):
+            raw = gen(TASK + "\n\n--- 入力 ---\n" + doc, 0.0 if k == 0 else 0.7, max_tokens=800)
+            j = find_json(raw)
+            total += 1
+            if j is None:
+                bad += 1
+            else:
+                outs.append(j)
+        per_input.append((doc, outs))
+    print(f"JSON取得: {total - bad}/{total} (パース失敗率 {bad / total:.0%})")
+    if bad / total >= 0.5:
+        print("!! パース失敗率50%超: 出力形式自体が崩れている(形式の明示強化か委譲回避を検討)")
+
+    def canon(v):
+        return json.dumps(v, ensure_ascii=False, sort_keys=True)
+
+    diverged, consensus = [], []
+    for i, (doc, outs) in enumerate(per_input):
+        label = doc[:24].replace("\n", " ")
+        if len(outs) < 3:
+            print(f"  (入力#{i}「{label}…」: 有効出力{len(outs)}件<3 のため分析スキップ)")
+            continue
+        if all(isinstance(o, dict) for o in outs):
+            for key in sorted(set().union(*[set(o) for o in outs])):
+                vals = [canon(o[key]) if key in o else "(キーなし)" for o in outs]
+                c = Counter(vals)
+                (diverged if len(c) > 1 else consensus).append(
+                    (i, label, key, c if len(c) > 1 else vals[0]))
+        else:  # dict以外(配列等)は全体で比較
+            c = Counter(canon(o) for o in outs)
+            (diverged if len(c) > 1 else consensus).append(
+                (i, label, "(全体)", c if len(c) > 1 else canon(outs[0])))
+
+    print("\n## [発散] 仕様の穴 — 実行間で値が割れたフィールド(必ず明示すべき)")
+    if not diverged:
+        print("  なし(この入力集合では割れなかった)")
+    for i, label, key, c in diverged:
+        dist = " / ".join(f"「{v}」×{n}" for v, n in c.most_common())
+        print(f"  ★ 入力#{i}「{label}…」 {key} → {dist}")
+        print("     → 形式・欠損時の値・単位・解釈のどれが未指定かを決め、指示に例として固定せよ")
+
+    print("\n## [合意] 暗黙の一致挙動 — 意図と合うか照合せよ(合わなければ明示)")
+    for i, label, key, v in consensus:
+        print(f"  - 入力#{i} {key} → {v}")
+
+    print(f"\nまとめ: 穴 {len(diverged)}件 / 合意 {len(consensus)}件 / パース失敗 {bad}/{total}")
+    sys.exit(0)
 
 def extract_code(text):
     m = re.search(r"```(?:python)?\s*(.*?)```", text, re.S)
