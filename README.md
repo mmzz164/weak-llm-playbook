@@ -1,51 +1,61 @@
 # weak-llm-playbook
 
-**弱い/安価なLLMへのコーディング委譲を、勘ではなく測定で運用するツールキット+Claude Codeスキル。**
+**A measurement-driven toolkit (+ Claude Code skill) for delegating coding tasks to weak/cheap LLMs.**
 
-*A measurement-driven toolkit (+ Claude Code skill) for delegating coding tasks to weak/cheap LLMs: probe a model's default behaviors, detect spec holes by implementation disagreement, and write the minimum sufficient instruction.*
+Probe a model's default behaviors, detect spec holes by implementation disagreement, and write the minimum sufficient instruction — by measurement, not gut feeling.
 
-## 背景にある発見(実測)
+日本語版: [README.ja.md](README.ja.md)
 
-ローカル27B級モデル(Qwen3.6-27B等)への委譲実験で分かったこと:
+## Key findings (measured)
 
-1. **弱LLMは「難しいから」失敗するのではなく「書いていないこと」で失敗する。**
-   明示された規則なら、subtleでも反直感(標準挙動と逆の仕様)でも正しく実装する。
-2. 失敗要因は2つだけ:**曖昧**(未記述の仕様→探索で発散、コスト1.5〜2.3倍)と
-   **省略**(既定と異なる挙動の書き忘れ→モデルの既定で「正しく」実装され意図とズレる)。
-3. よって発注側の仕事は「**意図がモデルの既定からズレる点を、1つも言い落とさず書くこと**」に尽きる。
-   そして「どこがズレるか」は測定できる。
+From delegation experiments with local ~27B-class models (Qwen3.6-27B etc.):
 
-詳細な実験ログは [docs/FINDINGS.md](docs/FINDINGS.md)。
+1. **Weak LLMs don't fail because a task is "hard" — they fail on what you didn't write.**
+   Given an explicit rule, they implement it correctly even when it is subtle or
+   counterintuitive (the opposite of the standard behavior in training data).
+2. There are only two failure causes: **ambiguity** (unwritten spec → the model wanders and
+   fixes the spec on its own; measured cost 1.5–2.3x tokens) and **omission** (you forgot to
+   write a non-default behavior → the model "correctly" implements its own default,
+   diverging from your intent).
+3. Therefore the orchestrator's whole job is: **write down every point where your intent
+   deviates from the model's defaults, without missing one.** And "where it deviates"
+   is measurable.
 
-## ツール
+Full experiment log: [docs/FINDINGS.md](docs/FINDINGS.md).
 
-### 1. `default_probe.py` — モデルの既定挙動プロファイラ
+## Tools
 
-「1点だけ未指定の極小タスク」を32判断点×N回投げ、生成コードを**実行**してどの既定を選んだか分類。
+### 1. `default_probe.py` — default-behavior profiler
+
+Sends 32 decision points × N runs of "minimal tasks with exactly one unspecified decision",
+**executes** the generated code, and classifies which default the model chose.
 
 ```bash
-# OpenAI互換エンドポイント (vLLM / llama.cpp / ollama / OpenAI API)
+# OpenAI-compatible endpoint (vLLM / llama.cpp / ollama / OpenAI API)
 python3 skill/weak-llm-playbook/scripts/default_probe.py Qwen3.6-27B http://localhost:8000 5
 
-# Anthropic Messages形式 (Anthropic API / claude-code-router)
+# Anthropic Messages format (Anthropic API / claude-code-router)
 python3 skill/weak-llm-playbook/scripts/default_probe.py claude-haiku-4-5 https://api.anthropic.com 5 nothink --api anthropic
 
-# モデル間diff = 「モデルを替えたら指示のどこを書き換えるか」
+# Cross-model diff = "what to rewrite in your instructions when switching models"
 python3 skill/weak-llm-playbook/scripts/default_probe.py --diff profileA.json profileB.json
 ```
 
-出力は4分類:
-- **実装不能**(多数派がエラー)→ 明示しても救えない。委譲回避
-- **揺れる**(安定性<0.8)→ 必ず明示
-- **安定な既定** → 中身を提示。意図と食い違う点だけ明示(例: Qwenは「n番目」=0始まり、範囲=終端含む)
-- **モデル間差**(--diff)→ 乗り換え時に書き換える点
+The report has four categories:
+- **Not implementable** (majority of runs error) → explicitness can't save it; avoid delegation
+- **Unstable** (stability < 0.8) → always specify explicitly
+- **Stable defaults** → the report shows the default's content; specify only where it
+  mismatches your intent (e.g. Qwen: "n-th" = 0-indexed, ranges = end-inclusive)
+- **Cross-model differences** (`--diff`) → what to rewrite when switching models
 
-適応リサンプリング(曖昧帯だけ自動で追加サンプル)、`--only`での部分実行に対応。
+Supports adaptive resampling (extra samples only in the ambiguous stability band) and
+partial runs via `--only`.
 
-### 2. `spec_holes.py` — タスク駆動スペック穴検出(disagreement probing)
+### 2. `spec_holes.py` — task-driven spec-hole detection (disagreement probing)
 
-ドラフト仕様をワーカーにK回実装させ、同じ入力で全実装を実行。**挙動が割れた入力=あなたが
-書き忘れている仕様**として機械検出する。曖昧さを想像する能力が不要になる。
+Has the worker implement your draft spec K times, then runs all implementations on the
+same inputs. **Inputs where behavior diverges = spec you forgot to write.** Detection is
+mechanical — no one has to *imagine* the ambiguity.
 
 ```bash
 python3 skill/weak-llm-playbook/scripts/spec_holes.py examples/draft_topn.txt top_n \
@@ -53,44 +63,69 @@ python3 skill/weak-llm-playbook/scripts/spec_holes.py examples/draft_topn.txt to
 ```
 
 ```
-## [発散] 仕様の穴 — 実装間で挙動が割れた入力(必ず明示すべき)
- ★ top_n([3,1,2], 2) → 「[3,2]」×3 / 「[1,2]」×1   ← 「上位」=ソートか先頭かの穴
-## [合意] 暗黙の一致挙動 — 意図と合うか照合せよ
+## [DIVERGED] spec holes — inputs where implementations disagree (must specify)
+ ★ top_n([3,1,2], 2) → "[3,2]"×3 / "[1,2]"×1   ← hole: "top" = sorted or first-n?
+## [AGREED] implicit consensus behavior — check against your intent
  - top_n([], 3) → []
-実装不能率 1/5
+not-implementable rate: 1/5
 ```
 
-### 3. Claude Code スキル
+### 3. Claude Code skill
 
-`skill/weak-llm-playbook/` を `~/.claude/skills/` にコピーすると、Claude Codeが
-委譲判断→プロファイル照合→5ブロックスペック作成→独立検証のフローを実行できる。
+Copy `skill/weak-llm-playbook/` into `~/.claude/skills/` and Claude Code will run the
+full flow: delegation decision → profile matching → 5-block spec writing → independent
+verification.
 
 ```bash
 cp -r skill/weak-llm-playbook ~/.claude/skills/
 ```
 
-## 使いどころ
+## When to use what
 
-| 場面 | 使い方 |
+| Situation | How |
 |---|---|
-| 日常の実装外注 | 仕様を固められる実装をローカルLLMへ。スキルの5ブロックテンプレで指示 |
-| 新モデルの受け入れ検査 | `default_probe` 一発で「委譲に耐えるか(実装不能率)」「既定のクセ」が出る |
-| モデル乗り換え | `--diff` で「書き換えるべき指示」が機械的に出る |
-| 重要タスクの委譲前保険 | `spec_holes` で自分の仕様書の穴を投げる前に検出 |
+| Everyday implementation outsourcing | Delegate spec-stable implementations to a local LLM, using the skill's 5-block template |
+| Acceptance test for a new model | One `default_probe` run tells you "can it take delegation at all (not-implementable rate)" and "its default quirks" |
+| Switching models | `--diff` mechanically lists the instructions you must rewrite |
+| Insurance before delegating a critical task | `spec_holes` finds the holes in your own spec before you send it |
 
-## 検証済みの性質
+## Authentication / API keys
 
-- **直叩きプローブの予測は実委譲(エージェント経由)の挙動と一致**(検証3/3)
-- **操作者(スペックを書く側)が弱いモデルでも回る**: 判断が「プロファイルとの2値比較」に
-  外部化されているため、Haiku級でも核心の照合は全問正解だった
-- 依存ゼロ(Python標準ライブラリのみ)
+The repo ships **no keys**, and local endpoints (vLLM / llama.cpp / ollama) typically
+need none — everything works out of the box against `http://localhost:...`.
 
-## 注意
+When the endpoint requires auth (OpenAI API, Anthropic API, an authenticated proxy):
 
-- プローブは生成コードを**そのまま実行**する。信頼できないエンドポイントに対しては
-  サンドボックス内で実行すること。
-- 判断点バッテリーは現状Python関数中心。他言語・他ドメインはプローブ追加で拡張可能。
-- プロファイルはモデル×量子化ごと。量子化を変えたら再測定を推奨。
+- Pass `--key YOUR_KEY`, or set an environment variable. Resolution order:
+  `--key` > `PROBE_API_KEY` > `ANTHROPIC_API_KEY` > `OPENAI_API_KEY`.
+- `--api openai` sends `Authorization: Bearer <key>`.
+- `--api anthropic` sends both `x-api-key` and `Authorization: Bearer` (covers the
+  Anthropic API and Anthropic-format proxies like claude-code-router). A key is
+  mandatory in this mode.
+- Prefer environment variables over `--key` on shared machines (shell history).
+
+```bash
+export ANTHROPIC_API_KEY=sk-ant-...
+python3 skill/weak-llm-playbook/scripts/default_probe.py claude-haiku-4-5 \
+        https://api.anthropic.com 5 nothink --api anthropic
+```
+
+## Validated properties
+
+- **Direct-endpoint probe results predict real agent-mediated delegation behavior**
+  (validated 3/3)
+- **Works even when the orchestrator (the one writing the spec) is a weak model**:
+  the judgment is externalized into "a 2-value comparison against the profile", so even
+  a Haiku-class orchestrator got all core matches right
+- Zero dependencies (Python standard library only)
+
+## Caveats
+
+- The probes **execute generated code as-is**. Run inside a sandbox when probing
+  untrusted endpoints.
+- The decision-point battery is currently Python-function-centric. Other languages /
+  domains can be covered by adding probes.
+- Profiles are per model × quantization. Re-measure after changing quantization.
 
 ## License
 
