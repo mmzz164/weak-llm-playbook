@@ -1,0 +1,197 @@
+{
+ "model": "Phi-3.5-mini",
+ "mode": "nothink",
+ "N": 5,
+ "base": "http://localhost:8002",
+ "api": "openai",
+ "domain": "io",
+ "rows": [
+  {
+   "id": "io_date_fmt",
+   "default": "ISO(0埋め)",
+   "stability": 1.0,
+   "n": 5,
+   "dist": {
+    "ISO(0埋め)": 5
+   },
+   "canonical": "ISO(0埋め)"
+  },
+  {
+   "id": "io_missing_field",
+   "default": "値を発明/他",
+   "stability": 0.73,
+   "n": 15,
+   "dist": {
+    "値を発明/他": 11,
+    "JSON不成立": 4
+   },
+   "canonical": "値を発明/他"
+  },
+  {
+   "id": "io_key_style",
+   "default": "camelCase",
+   "stability": 0.86,
+   "n": 7,
+   "dist": {
+    "camelCase": 6,
+    "snake_case": 1
+   },
+   "canonical": "camelCase"
+  },
+  {
+   "id": "io_num_unit",
+   "default": "数値(単位なし)",
+   "stability": 1.0,
+   "n": 5,
+   "dist": {
+    "数値(単位なし)": 5
+   },
+   "canonical": "数値(単位なし)"
+  },
+  {
+   "id": "io_bool_style",
+   "default": "bool(true)",
+   "stability": 1.0,
+   "n": 5,
+   "dist": {
+    "bool(true)": 5
+   },
+   "canonical": "bool(true)"
+  },
+  {
+   "id": "io_pure_json",
+   "default": "説明文つき",
+   "stability": 1.0,
+   "n": 5,
+   "dist": {
+    "説明文つき": 5
+   },
+   "canonical": "説明文つき"
+  },
+  {
+   "id": "io_extra_keys",
+   "default": "指定キーのみ",
+   "stability": 1.0,
+   "n": 5,
+   "dist": {
+    "指定キーのみ": 5
+   },
+   "canonical": "指定キーのみ"
+  },
+  {
+   "id": "io_date_ambig",
+   "default": "MM/DD解釈(1月2日)",
+   "stability": 1.0,
+   "n": 5,
+   "dist": {
+    "MM/DD解釈(1月2日)": 5
+   },
+   "canonical": "MM/DD解釈(1月2日)"
+  },
+  {
+   "id": "io_range_count",
+   "default": "下限(3)",
+   "stability": 1.0,
+   "n": 5,
+   "dist": {
+    "下限(3)": 5
+   },
+   "canonical": "下限(3)"
+  },
+  {
+   "id": "io_csv_header",
+   "default": "ヘッダなし",
+   "stability": 0.53,
+   "n": 15,
+   "dist": {
+    "ヘッダなし": 8,
+    "ヘッダあり": 7
+   },
+   "canonical": "ヘッダなし"
+  },
+  {
+   "id": "txt_sum_lang",
+   "default": "入力言語(日本語)で応答",
+   "stability": 1.0,
+   "n": 5,
+   "dist": {
+    "入力言語(日本語)で応答": 5
+   },
+   "canonical": "入力言語(日本語)で応答"
+  },
+  {
+   "id": "txt_sum_format",
+   "default": "散文",
+   "stability": 1.0,
+   "n": 5,
+   "dist": {
+    "散文": 5
+   },
+   "canonical": "散文"
+  },
+  {
+   "id": "txt_sum_length",
+   "default": "短段落(240字未満)",
+   "stability": 1.0,
+   "n": 5,
+   "dist": {
+    "短段落(240字未満)": 5
+   },
+   "canonical": "短段落(240字未満)"
+  },
+  {
+   "id": "txt_tone",
+   "default": "敬語",
+   "stability": 1.0,
+   "n": 5,
+   "dist": {
+    "敬語": 5
+   },
+   "canonical": "敬語"
+  },
+  {
+   "id": "txt_name_order",
+   "default": "姓-名(Yamada Taro)",
+   "stability": 0.4,
+   "n": 5,
+   "dist": {
+    "姓-名(Yamada Taro)": 2,
+    "名-姓(Taro Yamada)": 2,
+    "他/ローマ字なし": 1
+   },
+   "canonical": "姓-名(Yamada Taro)"
+  },
+  {
+   "id": "txt_units",
+   "default": "単位そのまま(ポンド)",
+   "stability": 1.0,
+   "n": 5,
+   "dist": {
+    "単位そのまま(ポンド)": 5
+   },
+   "canonical": "単位そのまま(ポンド)"
+  },
+  {
+   "id": "txt_clarify",
+   "default": "手順/コマンドを答える",
+   "stability": 0.67,
+   "n": 15,
+   "dist": {
+    "手順/コマンドを答える": 10,
+    "逆質問(不足を指摘)": 4,
+    "架空データで進める": 1
+   },
+   "canonical": "手順/コマンドを答える"
+  },
+  {
+   "id": "txt_list_style",
+   "default": "番号付き(1.)",
+   "stability": 1.0,
+   "n": 5,
+   "dist": {
+    "番号付き(1.)": 5
+   },
+   "canonical": "番号付き(1.)"
+  }
+ ]
+}

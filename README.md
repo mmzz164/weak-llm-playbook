@@ -64,6 +64,11 @@ kind, because they never waver and silently mismatch your intent):
 - On missing info: a genuine 50/50 coin flip between asking back and answering with
   generic instructions (never fabricates, though) → always specify which you want
 
+Cross-model `--diff` works on the io battery too — Qwen3.6-27B vs Phi-3.5-mini differ on
+6/18 points, and the biggest one is a safety issue: on missing fields Qwen stably emits
+`null`, while **Phi invents values** (and the "3–5 items" range flips from midpoint-4 to
+lower-bound-3 — both stable, so switching models silently changes your extracted data).
+
 The report has four categories:
 - **Not implementable** (majority of runs error) → explicitness can't save it; avoid delegation
 - **Unstable** (stability < 0.8) → always specify explicitly
