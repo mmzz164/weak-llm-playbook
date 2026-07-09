@@ -1,0 +1,326 @@
+{
+ "model": "Qwen3.6-27B-NVFP4",
+ "mode": "nothink",
+ "N": 5,
+ "rows": [
+  {
+   "id": "interval_touch",
+   "default": "接触も統合",
+   "stability": 1.0,
+   "n": 5,
+   "dist": {
+    "接触も統合": 5
+   },
+   "canonical": "接触も統合"
+  },
+  {
+   "id": "round_half",
+   "default": "half_up(2.5→3)",
+   "stability": 1.0,
+   "n": 5,
+   "dist": {
+    "half_up(2.5→3)": 5
+   },
+   "canonical": "half_up(2.5→3)"
+  },
+  {
+   "id": "avg_empty",
+   "default": "例外",
+   "stability": 0.53,
+   "n": 15,
+   "dist": {
+    "例外": 8,
+    "0を返す": 7
+   },
+   "canonical": "例外"
+  },
+  {
+   "id": "dedup_order",
+   "default": "順序保持",
+   "stability": 0.86,
+   "n": 7,
+   "dist": {
+    "順序保持": 6,
+    "ソート済": 1
+   },
+   "canonical": "順序保持"
+  },
+  {
+   "id": "topn_short",
+   "default": "不足時は全件",
+   "stability": 1.0,
+   "n": 5,
+   "dist": {
+    "不足時は全件": 5
+   },
+   "canonical": "不足時は全件"
+  },
+  {
+   "id": "split_case",
+   "default": "大小無視",
+   "stability": 1.0,
+   "n": 5,
+   "dist": {
+    "大小無視": 5
+   },
+   "canonical": "大小無視"
+  },
+  {
+   "id": "fib_index",
+   "default": "fib(0)=0,fib(1)=1,fib(2)=1",
+   "stability": 0.53,
+   "n": 15,
+   "dist": {
+    "fib(0)=0,fib(1)=1,fib(2)=1": 8,
+    "ERR": 7
+   },
+   "canonical": "fib(0)=0,fib(1)=1,fib(2)=1"
+  },
+  {
+   "id": "palindrome_norm",
+   "default": "厳密一致",
+   "stability": 1.0,
+   "n": 5,
+   "dist": {
+    "厳密一致": 5
+   },
+   "canonical": "厳密一致"
+  },
+  {
+   "id": "neg_modulo",
+   "default": "python式(2)",
+   "stability": 1.0,
+   "n": 5,
+   "dist": {
+    "python式(2)": 5
+   },
+   "canonical": "python式(2)"
+  },
+  {
+   "id": "div_zero",
+   "default": "例外(ZeroDiv)",
+   "stability": 1.0,
+   "n": 5,
+   "dist": {
+    "例外(ZeroDiv)": 5
+   },
+   "canonical": "例外(ZeroDiv)"
+  },
+  {
+   "id": "range_incl",
+   "default": "終端含む",
+   "stability": 1.0,
+   "n": 5,
+   "dist": {
+    "終端含む": 5
+   },
+   "canonical": "終端含む"
+  },
+  {
+   "id": "sort_case",
+   "default": "ASCII順",
+   "stability": 1.0,
+   "n": 5,
+   "dist": {
+    "ASCII順": 5
+   },
+   "canonical": "ASCII順"
+  },
+  {
+   "id": "split_multi",
+   "default": "空白畳む",
+   "stability": 1.0,
+   "n": 5,
+   "dist": {
+    "空白畳む": 5
+   },
+   "canonical": "空白畳む"
+  },
+  {
+   "id": "empty_split",
+   "default": "空リスト",
+   "stability": 1.0,
+   "n": 5,
+   "dist": {
+    "空リスト": 5
+   },
+   "canonical": "空リスト"
+  },
+  {
+   "id": "missing_key",
+   "default": "例外(KeyError)",
+   "stability": 1.0,
+   "n": 5,
+   "dist": {
+    "例外(KeyError)": 5
+   },
+   "canonical": "例外(KeyError)"
+  },
+  {
+   "id": "flatten",
+   "default": "深く平坦化",
+   "stability": 1.0,
+   "n": 5,
+   "dist": {
+    "深く平坦化": 5
+   },
+   "canonical": "深く平坦化"
+  },
+  {
+   "id": "nth_index",
+   "default": "0-indexed",
+   "stability": 1.0,
+   "n": 5,
+   "dist": {
+    "0-indexed": 5
+   },
+   "canonical": "0-indexed"
+  },
+  {
+   "id": "none_input",
+   "default": "例外(TypeError)",
+   "stability": 1.0,
+   "n": 5,
+   "dist": {
+    "例外(TypeError)": 5
+   },
+   "canonical": "例外(TypeError)"
+  },
+  {
+   "id": "reverse_default",
+   "default": "昇順",
+   "stability": 1.0,
+   "n": 5,
+   "dist": {
+    "昇順": 5
+   },
+   "canonical": "昇順"
+  },
+  {
+   "id": "title_case",
+   "default": "各語頭大文字",
+   "stability": 1.0,
+   "n": 5,
+   "dist": {
+    "各語頭大文字": 5
+   },
+   "canonical": "各語頭大文字"
+  },
+  {
+   "id": "clamp_pct",
+   "default": "0-100%表記",
+   "stability": 0.73,
+   "n": 15,
+   "dist": {
+    "0-100%表記": 11,
+    "他(25.00%)": 3,
+    "他(25.0%)": 1
+   },
+   "canonical": "0-100%表記"
+  },
+  {
+   "id": "int_div",
+   "default": "float(1.5)",
+   "stability": 1.0,
+   "n": 5,
+   "dist": {
+    "float(1.5)": 5
+   },
+   "canonical": "float(1.5)"
+  },
+  {
+   "id": "slice_oob",
+   "default": "全件(クランプ)",
+   "stability": 1.0,
+   "n": 5,
+   "dist": {
+    "全件(クランプ)": 5
+   },
+   "canonical": "全件(クランプ)"
+  },
+  {
+   "id": "neg_index",
+   "default": "負index許容(末尾)",
+   "stability": 1.0,
+   "n": 5,
+   "dist": {
+    "負index許容(末尾)": 5
+   },
+   "canonical": "負index許容(末尾)"
+  },
+  {
+   "id": "strip_parse",
+   "default": "空白除去して解釈",
+   "stability": 1.0,
+   "n": 5,
+   "dist": {
+    "空白除去して解釈": 5
+   },
+   "canonical": "空白除去して解釈"
+  },
+  {
+   "id": "bool_case",
+   "default": "大小無視でTrue",
+   "stability": 1.0,
+   "n": 5,
+   "dist": {
+    "大小無視でTrue": 5
+   },
+   "canonical": "大小無視でTrue"
+  },
+  {
+   "id": "date_fmt",
+   "default": "ISO(0埋め)",
+   "stability": 1.0,
+   "n": 5,
+   "dist": {
+    "ISO(0埋め)": 5
+   },
+   "canonical": "ISO(0埋め)"
+  },
+  {
+   "id": "round_ndigits",
+   "default": "小数2桁",
+   "stability": 1.0,
+   "n": 5,
+   "dist": {
+    "小数2桁": 5
+   },
+   "canonical": "小数2桁"
+  },
+  {
+   "id": "max_empty",
+   "default": "例外(ValueError)",
+   "stability": 0.86,
+   "n": 7,
+   "dist": {
+    "例外(ValueError)": 6,
+    "例外(IndexError)": 1
+   },
+   "canonical": "例外(ValueError)"
+  },
+  {
+   "id": "dup_count",
+   "default": "他(5)",
+   "stability": 0.53,
+   "n": 15,
+   "dist": {
+    "他(5)": 8,
+    "他(3)": 4,
+    "他({1: 2, 3: 3})": 1,
+    "重複した値の種類数(2)": 2
+   },
+   "canonical": "他(5)"
+  },
+  {
+   "id": "capitalize_rest",
+   "default": "先頭のみ大文字化(残り保持)",
+   "stability": 1.0,
+   "n": 5,
+   "dist": {
+    "先頭のみ大文字化(残り保持)": 5
+   },
+   "canonical": "先頭のみ大文字化(残り保持)"
+  }
+ ]
+}
