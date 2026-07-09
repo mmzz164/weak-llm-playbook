@@ -7,8 +7,32 @@
 モデル差異の自動吸収:
   - openai: chat_template_kwargs(enable_thinking)非対応なら外して再試行(以後は送らない)
   - anthropic: temperature非対応モデル(Fable5/Opus4.7+等)は400を検知して外し再試行
+detect_model(base): GET /v1/models で配信中モデルを自動検出(model引数の省略用)。
 """
 import json, os, urllib.request, urllib.error
+
+
+def _resolve_key(key=None):
+    return (key or os.environ.get("PROBE_API_KEY")
+            or os.environ.get("ANTHROPIC_API_KEY")
+            or os.environ.get("OPENAI_API_KEY"))
+
+
+def detect_model(base, key=None):
+    """GET {base}/v1/models で配信中モデルのID一覧を返す(OpenAI互換サーバー用)。
+    vLLM/llama.cpp/ollama は単一〜少数モデルなので、呼び出し側は先頭を既定に使える。"""
+    key = _resolve_key(key)
+    req = urllib.request.Request(
+        base.rstrip("/") + "/v1/models",
+        headers={"Authorization": f"Bearer {key}"} if key else {})
+    try:
+        r = json.load(urllib.request.urlopen(req, timeout=10))
+        models = [m["id"] for m in r.get("data", []) if m.get("id")]
+    except Exception as e:
+        raise RuntimeError(f"モデル自動検出に失敗 ({base}/v1/models): {e}。model引数を明示してください") from e
+    if not models:
+        raise RuntimeError(f"{base}/v1/models が空。model引数を明示してください")
+    return models
 
 
 class LLMClient:
@@ -16,9 +40,7 @@ class LLMClient:
         self.model = model
         self.base = base.rstrip("/")
         self.api = api
-        self.key = (key or os.environ.get("PROBE_API_KEY")
-                    or os.environ.get("ANTHROPIC_API_KEY")
-                    or os.environ.get("OPENAI_API_KEY"))
+        self.key = _resolve_key(key)
         self.think = think
         self._no_ctk = False    # openai: chat_template_kwargs 非対応を記憶
         self._no_temp = False   # anthropic: temperature 非対応を記憶

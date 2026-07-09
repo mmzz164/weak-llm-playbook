@@ -25,6 +25,11 @@ English version: [README.md](README.md)
 
 ```bash
 # OpenAI互換エンドポイント (vLLM / llama.cpp / ollama / OpenAI API)
+# モデル名は省略可 — 先頭引数がURLなら GET /v1/models から自動検出する
+# (vLLM等の単一モデルサーバーならこれだけで動く):
+python3 skill/weak-llm-playbook/scripts/default_probe.py http://localhost:8000 5
+
+# 明示指定(複数モデル配信サーバー / Anthropic形式では必須):
 python3 skill/weak-llm-playbook/scripts/default_probe.py Qwen3.6-27B http://localhost:8000 5
 
 # Anthropic Messages形式 (Anthropic API / claude-code-router)

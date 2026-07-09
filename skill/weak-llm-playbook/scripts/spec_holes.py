@@ -19,25 +19,37 @@
                   省略時はワーカー自身に提案させる(弱いモデルだと壊れた JSON を
                   返して失敗しうるため、発注側供給が確実)
   例) python3 spec_holes.py draft.txt top_n Qwen3.6-27B-NVFP4 http://localhost:8000 5 probe_inputs.json
+  model省略時(openai互換のみ): /v1/models から自動検出。"" をプレースホルダにしてもよい
 """
 import sys, json, re, types, urllib.request
 from collections import Counter
 
 import argparse, os
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from llm_client import LLMClient
+from llm_client import LLMClient, detect_model
 
 ap = argparse.ArgumentParser(description="タスク駆動スペック穴検出(任意エンドポイント対応)")
 ap.add_argument("task_file")
 ap.add_argument("fn_name")
-ap.add_argument("model", nargs="?", default="Qwen3.6-27B-NVFP4")
+ap.add_argument("model", nargs="?", default=None,
+                help="省略(または\"\")で /v1/models から自動検出 (openai互換のみ)")
 ap.add_argument("base",  nargs="?", default="http://localhost:8000")
 ap.add_argument("k",     nargs="?", type=int, default=5)
 ap.add_argument("inputs", nargs="?", default=None, help="発注側プローブ入力のJSONファイル(推奨)")
 ap.add_argument("--api", choices=["openai", "anthropic"], default="openai")
 ap.add_argument("--key", default=None)
-args = ap.parse_args()
+_argv = sys.argv[1:]
+if len(_argv) > 2 and _argv[2].startswith(("http://", "https://")):
+    _argv.insert(2, "")   # 第3引数がURL = model省略とみなし繰り上げ
+args = ap.parse_args(_argv)
 TASK_FILE, FN_NAME, MODEL, BASE, K = args.task_file, args.fn_name, args.model, args.base, args.k
+if not MODEL:
+    if args.api == "anthropic":
+        ap.error("--api anthropic では model を明示してください(自動検出は openai互換の /v1/models のみ)")
+    _models = detect_model(BASE, args.key)
+    MODEL = _models[0]
+    print(f"# model未指定 → {BASE}/v1/models から自動検出: {MODEL}"
+          + (f" (他{len(_models)-1}件)" if len(_models) > 1 else ""))
 
 TASK = open(TASK_FILE).read().strip()
 CLIENT = LLMClient(MODEL, BASE, api=args.api, key=args.key, think=False)

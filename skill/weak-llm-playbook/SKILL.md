@@ -55,6 +55,8 @@ description: >-
   → 各判断点の「既定」と「安定性(=何回中同じ選択をしたか)」が出る。適応リサンプリングで
   曖昧帯(0.5〜0.85)だけ自動的に追加サンプルして精密化。
 - 使い方: `python3 scripts/default_probe.py <model> <base_url> <N> [think] [--api openai|anthropic] [--key KEY] [--only id1,id2]`
+  model は省略可(OpenAI互換のみ): 先頭引数がURLなら `/v1/models` から自動検出
+  (例: `default_probe.py http://localhost:8000 5`)。`""` プレースホルダでも同じ。
 - **任意エンドポイント対応**: 既定はOpenAI互換(/v1/chat/completions — vLLM/llama.cpp/ollama等)。
   `--api anthropic` で Anthropic Messages形式(/v1/messages)。認証は `--key` か環境変数
   (PROBE_API_KEY/ANTHROPIC_API_KEY/OPENAI_API_KEY)。モデル差異(enable_thinking非対応、
@@ -81,6 +83,7 @@ description: >-
 曖昧さを発注側が想像する必要がなく、「割れた」という事実が穴の証拠になる。
 
 - 使い方: `python3 scripts/spec_holes.py <draft.txt> <関数名> <model> <base_url> 5 <inputs.json> [--api ...] [--key ...]`
+  model は省略可(OpenAI互換のみ): 第3引数がURLなら `/v1/models` から自動検出。
   inputs.json(プローブ入力)は**発注側が用意する**(境界を突く引数の組の配列)。
   ワーカー提案の合併もあるが、弱いモデルは壊れたJSONを返すので発注側供給が確実。
 - 出力の読み方(3シグナル):

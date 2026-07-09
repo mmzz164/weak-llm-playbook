@@ -5,6 +5,8 @@
 
 使い方: python3 default_probe.py [model] [base_url] [N]
   例: python3 default_probe.py Qwen3.6-27B-NVFP4 http://localhost:8000 5
+  model省略時(openai互換のみ): /v1/models から自動検出
+  例: python3 default_probe.py "" http://localhost:8000 5   ← ""でも省略でも可
 """
 import sys, json, re, urllib.request, types
 
@@ -35,10 +37,11 @@ if len(sys.argv) > 1 and sys.argv[1] == "--diff":
 
 import argparse, os
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from llm_client import LLMClient
+from llm_client import LLMClient, detect_model
 
 ap = argparse.ArgumentParser(description="既定プローブ(任意エンドポイント対応)")
-ap.add_argument("model", nargs="?", default="Qwen3.6-27B-NVFP4")
+ap.add_argument("model", nargs="?", default=None,
+                help="省略(または\"\")で /v1/models から自動検出 (openai互換のみ)")
 ap.add_argument("base",  nargs="?", default="http://localhost:8000")
 ap.add_argument("n",     nargs="?", type=int, default=5)
 ap.add_argument("mode",  nargs="?", default="nothink", help="think で思考モード")
@@ -46,8 +49,18 @@ ap.add_argument("--api", choices=["openai", "anthropic"], default="openai",
                 help="エンドポイント形式 (既定: openai互換 /v1/chat/completions)")
 ap.add_argument("--key", default=None, help="APIキー (省略時 PROBE_API_KEY/ANTHROPIC_API_KEY/OPENAI_API_KEY)")
 ap.add_argument("--only", default=None, help="実行する判断点をカンマ区切りで限定 (例: missing_key,range_incl)")
-args = ap.parse_args()
+_argv = sys.argv[1:]
+if _argv and _argv[0].startswith(("http://", "https://")):
+    _argv.insert(0, "")   # 先頭がURL = model省略とみなし繰り上げ
+args = ap.parse_args(_argv)
 MODEL, BASE, N = args.model, args.base, args.n
+if not MODEL:
+    if args.api == "anthropic":
+        ap.error("--api anthropic では model を明示してください(自動検出は openai互換の /v1/models のみ)")
+    _models = detect_model(BASE, args.key)
+    MODEL = _models[0]
+    print(f"# model未指定 → {BASE}/v1/models から自動検出: {MODEL}"
+          + (f" (他{len(_models)-1}件: {', '.join(_models[1:4])})" if len(_models) > 1 else ""))
 THINK = args.mode in ("1", "think", "true")
 CLIENT = LLMClient(MODEL, BASE, api=args.api, key=args.key, think=THINK)
 

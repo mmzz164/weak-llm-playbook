@@ -32,6 +32,11 @@ Sends 32 decision points × N runs of "minimal tasks with exactly one unspecifie
 
 ```bash
 # OpenAI-compatible endpoint (vLLM / llama.cpp / ollama / OpenAI API)
+# The model name is optional — when the first arg is a URL, it is auto-detected
+# from GET /v1/models (single-model servers like vLLM need nothing more):
+python3 skill/weak-llm-playbook/scripts/default_probe.py http://localhost:8000 5
+
+# Or specify it explicitly (required for multi-model servers / Anthropic format):
 python3 skill/weak-llm-playbook/scripts/default_probe.py Qwen3.6-27B http://localhost:8000 5
 
 # Anthropic Messages format (Anthropic API / claude-code-router)
