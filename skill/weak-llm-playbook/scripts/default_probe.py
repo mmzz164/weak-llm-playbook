@@ -20,15 +20,15 @@ if len(sys.argv) > 1 and sys.argv[1] == "--diff":
     import json as _j
     profs = [_j.load(open(f)) for f in sys.argv[2:]]
     if len(profs) < 2:
-        print("--diff にはプロファイルJSONを2個以上指定してください"); sys.exit(2)
+        print("--diff requires 2 or more profile JSONs"); sys.exit(2)
     models = [p["model"] for p in profs]
     maps = [{r["id"]: r for r in p["rows"]} for p in profs]
     ids = []
     for m in maps:                                    # 出現順を保った和集合
         ids += [i for i in m if i not in ids]
-    print("# 既定プロファイル diff: " + "  vs  ".join(models))
+    print("# default-profile diff: " + "  vs  ".join(models))
     w = 20
-    print(f"{'probe':<18} " + " ".join(f"{m[:w]:<{w}}" for m in models) + " 差分")
+    print(f"{'probe':<18} " + " ".join(f"{m[:w]:<{w}}" for m in models) + " diff")
     diffs = []
     for pid in ids:
         rs = [m.get(pid) for m in maps]
@@ -36,42 +36,42 @@ if len(sys.argv) > 1 and sys.argv[1] == "--diff":
         ss = [r["stability"] if r else None for r in rs]
         present = [c for c in cs if c != "—"]
         flag = ""
-        if len(set(present)) > 1: flag = "★既定が違う"
-        elif any(s is not None and s < 0.8 for s in ss): flag = "△不安定なモデルあり"
+        if len(set(present)) > 1: flag = "★ default differs"
+        elif any(s is not None and s < 0.8 for s in ss): flag = "△ unstable on some model"
         print(f"{pid:<18} " + " ".join(f"{c[:w]:<{w}}" for c in cs) + f" {flag}")
         if flag: diffs.append((pid, rs, flag))
-    print(f"\n## モデル差のある判断点(={len(diffs)}件): ここは『モデルを替えたら書き換える』対象")
+    print(f"\n## decision points that differ across models ({len(diffs)}): rewrite these when switching models")
     for pid, rs, flag in diffs:
-        detail = " / ".join(f"{m}=「{r['canonical']}」(安定{r['stability']})" if r else f"{m}=—"
+        detail = " / ".join(f"{m}=\"{r['canonical']}\" (stability {r['stability']})" if r else f"{m}=—"
                             for m, r in zip(models, rs))
         print(f"  - {pid}: {detail}  {flag}")
-    print("\nこの差分表 = 同じ意図でもモデルによって明示すべき点が入れ替わる箇所。")
+    print("\nThis table = where the points you must specify swap from model to model, even for the same intent.")
     sys.exit(0)
 
 import argparse, os
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from llm_client import LLMClient, detect_model, find_json
 
-ap = argparse.ArgumentParser(description="既定プローブ(任意エンドポイント対応)")
+ap = argparse.ArgumentParser(description="default-behavior probe (works against any endpoint)")
 ap.add_argument("model", nargs="?", default=None,
-                help="省略(または\"\")で /v1/models から自動検出 (openai互換のみ)")
+                help="omit (or \"\") to auto-detect from /v1/models (OpenAI-compatible only)")
 ap.add_argument("base",  nargs="?", default="http://localhost:8000")
 ap.add_argument("n",     nargs="?", type=int, default=5)
-ap.add_argument("mode",  nargs="?", default="nothink", help="think で思考モード")
+ap.add_argument("mode",  nargs="?", default="nothink", help="'think' enables thinking mode")
 ap.add_argument("--api", choices=["openai", "anthropic"], default="openai",
-                help="エンドポイント形式 (既定: openai互換 /v1/chat/completions)")
-ap.add_argument("--key", default=None, help="APIキー (省略時 PROBE_API_KEY/ANTHROPIC_API_KEY/OPENAI_API_KEY)")
-ap.add_argument("--only", default=None, help="実行する判断点をカンマ区切りで限定 (例: missing_key,range_incl)")
+                help="endpoint format (default: OpenAI-compatible /v1/chat/completions)")
+ap.add_argument("--key", default=None, help="API key (falls back to PROBE_API_KEY/ANTHROPIC_API_KEY/OPENAI_API_KEY)")
+ap.add_argument("--only", default=None, help="comma-separated probe ids to run (e.g. missing_key,range_incl)")
 ap.add_argument("--domain", choices=["code", "io", "all"], default="code",
-                help="判断点バッテリー: code=コーディング(既定) / io=構造化出力・抽出・文章 / all=両方")
+                help="built-in battery: code=coding (default) / io=structured output, extraction, writing / all=both")
 ap.add_argument("--probes", default=None, metavar="PACK.json",
-                help="プローブパックJSON(判断点を外部定義)。指定時は --domain より優先")
+                help="probe pack JSON (externally defined decision points); overrides --domain")
 ap.add_argument("--assert", dest="assert_base", default=None, metavar="BASELINE.json",
-                help="ベースラインプロファイルと比較し、既定変化/安定性低下/実装不能化があれば exit 1 (CI・モデル更新の回帰検知用)")
+                help="compare against a baseline profile; exit 1 on default changes / stability drops / newly not-implementable probes (CI regression check)")
 ap.add_argument("--parallel", type=int, default=1, metavar="N",
-                help="プローブを並列実行するワーカー数(既定1=直列。各プローブ内の適応リサンプリングは従来どおり)")
+                help="number of concurrent probe workers (default 1 = sequential; per-probe adaptive resampling is unchanged)")
 ap.add_argument("--validate", action="store_true",
-                help="--probes パックの埋め込みセルフテスト(probes[].tests)を実行して終了。ネットワーク不要")
+                help="run the pack's embedded self-tests (probes[].tests) and exit; no server needed")
 _argv = sys.argv[1:]
 if _argv and _argv[0].startswith(("http://", "https://")):
     _argv.insert(0, "")   # 先頭がURL = model省略とみなし繰り上げ
@@ -81,12 +81,12 @@ if not MODEL:
     if args.validate:
         MODEL = "(validate)"   # セルフテストはネットワーク不要なので自動検出しない
     elif args.api == "anthropic":
-        ap.error("--api anthropic では model を明示してください(自動検出は openai互換の /v1/models のみ)")
+        ap.error("--api anthropic requires an explicit model (auto-detection uses the OpenAI-compatible /v1/models only)")
     else:
         _models = detect_model(BASE, args.key)
         MODEL = _models[0]
-        print(f"# model未指定 → {BASE}/v1/models から自動検出: {MODEL}"
-              + (f" (他{len(_models)-1}件: {', '.join(_models[1:4])})" if len(_models) > 1 else ""))
+        print(f"# model not specified → auto-detected from {BASE}/v1/models: {MODEL}"
+              + (f" (+{len(_models)-1} more: {', '.join(_models[1:4])})" if len(_models) > 1 else ""))
 THINK = args.mode in ("1", "think", "true")
 
 # クライアントはスレッドローカル(--parallel 対応)。last_usage 等の状態がスレッド間で混ざらない
@@ -730,7 +730,7 @@ def load_pack(path):
         if "builtin" in p:
             base = builtin.get(p["builtin"])
             if base is None:
-                raise SystemExit(f"{path}: builtin '{p['builtin']}' は存在しない")
+                raise SystemExit(f"{path}: unknown builtin '{p['builtin']}'")
             lm = p.get("label_map") or {}
             def _wrap(cl=base["classify"], lm=lm):
                 def g(x):
@@ -809,7 +809,7 @@ if __name__ == "__main__":
     tag = "thinking" if THINK else "nothink"
     if args.probes:
         pack_name, PROBES = load_pack(args.probes)
-        print(f"(プローブパック: {pack_name} = {len(PROBES)}点)")
+        print(f"(probe pack: {pack_name} = {len(PROBES)} points)")
     elif args.domain == "io":
         pack_name = "io"; PROBES = PROBES_IO
     elif args.domain == "all":
@@ -819,12 +819,12 @@ if __name__ == "__main__":
     if args.only:
         wanted = set(args.only.split(","))
         PROBES = [p for p in PROBES if p["id"] in wanted]
-        print(f"(--only 指定: {len(PROBES)}点に限定)")
+        print(f"(--only: limited to {len(PROBES)} points)")
 
     # --validate: パック埋め込みセルフテストのみ実行(ネットワーク不要)
     if args.validate:
         if not args.probes:
-            ap.error("--validate は --probes と併用してください")
+            ap.error("--validate requires --probes")
         total = fails = 0
         for p in PROBES:
             for t in p.get("tests") or []:
@@ -836,14 +836,14 @@ if __name__ == "__main__":
                     got = err if fn is None else p["classify"](fn)
                 if got != t["expect"]:
                     fails += 1
-                    print(f"NG {p['id']}: {t['input'][:50]!r} → {got!r} (期待 {t['expect']!r})")
+                    print(f"NG {p['id']}: {t['input'][:50]!r} → {got!r} (expected {t['expect']!r})")
         print(f"validate: {total - fails}/{total} passed"
-              + ("" if total else " (このパックに tests は未定義)"))
+              + ("" if total else " (no tests defined in this pack)"))
         sys.exit(1 if fails else 0)
 
-    print(f"# 既定プロファイル: {MODEL} [{tag}] (N={N}, temp0=1回+temp0.7={N-1}回"
-          + (f", 並列{args.parallel}" if args.parallel > 1 else "") + ")")
-    print(f"{'probe':<18} {'既定(temp0)':<22} {'安定性':<7} 分布")
+    print(f"# default profile: {MODEL} [{tag}] (N={N}: 1x temp0 + {N-1}x temp0.7"
+          + (f", parallel {args.parallel}" if args.parallel > 1 else "") + ")")
+    print(f"{'probe':<18} {'default(temp0)':<22} {'stab.':<7} distribution")
     rows = []
     if args.parallel > 1:
         from concurrent.futures import ThreadPoolExecutor
@@ -865,28 +865,28 @@ if __name__ == "__main__":
     json.dump({"model": MODEL, "mode": tag, "N": N, "base": BASE, "api": args.api,
                "domain": pack_name, "rows": rows},
               open(outp, "w"), ensure_ascii=False, indent=1)
-    print(f"\n[保存] {outp}")
+    print(f"\n[saved] {outp}")
     priced = [r for r in rows if "avg_out_toks" in r]
     if priced:
         tot = sum(r["avg_out_toks"] * r["n"] for r in priced)
         avg_s = sum(r["avg_sec"] for r in priced) / len(priced)
-        print(f"(概算: 出力 計{tot}tok / 平均 {avg_s:.1f}s/サンプル — 委譲単価の目安としてJSONにも保存)")
+        print(f"(approx cost: {tot} output tokens total / {avg_s:.1f}s per sample — also saved in the JSON)")
     def _is_err(label):
         return (any(label.startswith(x) for x in ("EXEC_ERR", "RUN_ERR", "NO_FUNC", "LOAD_ERR", "ERR"))
                 or label.startswith("JSON不成立") or label == "JSONなし" or label == "出力なし")
     # 明示が必要な判断点 = 安定性が低い(揺れる)= モデルが既定を持っていない
-    print("\n## 実装不能な判断点(多数派がエラー = このモデルはこの種のタスク自体が不安定)")
+    print("\n## not implementable (majority errored — this model can't reliably do this kind of task)")
     for r in rows:
         if _is_err(r["default"]):
-            print(f"  - {r['id']}: {r['dist']} → 明示しても救えない。委譲回避か粒度昇降を検討")
-    print("## 明示すべき判断点(安定性<0.8 = モデルの既定が不安定)")
+            print(f"  - {r['id']}: {r['dist']} → explicitness won't save it; avoid delegation or change granularity")
+    print("## must specify (stability < 0.8 — the model has no stable default)")
     for r in rows:
         if not _is_err(r["default"]) and r["stability"] < 0.8:
-            print(f"  - {r['id']}: 揺れる {r['dist']} → 実タスクでは必ず明示せよ")
-    print("## 明示不要な判断点(安定 = 既定に任せてよい, ただし既定が意図と合う場合)")
+            print(f"  - {r['id']}: unstable {r['dist']} → always specify in real tasks")
+    print("## no need to specify (stable — trust the default IF it matches your intent)")
     for r in rows:
         if not _is_err(r["default"]) and r["stability"] >= 0.8:
-            print(f"  - {r['id']}: 既定=「{r['default']}」で安定。意図が同じなら書かなくてよい")
+            print(f"  - {r['id']}: stable default = \"{r['default']}\". Skip if it matches your intent")
 
     # ドリフト検知 (--assert): ベースラインと比較して回帰があれば exit 1
     if args.assert_base:
@@ -896,27 +896,27 @@ if __name__ == "__main__":
         for r in rows:
             b = bmap.get(r["id"])
             if not b:
-                info.append(f"{r['id']}: ベースラインに無い判断点(新規)"); continue
+                info.append(f"{r['id']}: not in baseline (new probe)"); continue
             r_err, b_err = _is_err(r["default"]), _is_err(b["default"])
             if r_err and not b_err:
-                hard.append(f"{r['id']}: 実装不能化 「{b['default']}」→「{r['default']}」 {r['dist']}")
+                hard.append(f"{r['id']}: became not-implementable \"{b['default']}\" → \"{r['default']}\" {r['dist']}")
             elif r["default"] != b["default"]:
                 if r["stability"] >= 0.8 and b["stability"] >= 0.8:
-                    hard.append(f"{r['id']}: 既定変化 「{b['default']}」(安定{b['stability']})"
-                                f"→「{r['default']}」(安定{r['stability']})")
+                    hard.append(f"{r['id']}: default changed \"{b['default']}\" (stab {b['stability']})"
+                                f" → \"{r['default']}\" (stab {r['stability']})")
                 else:
-                    soft.append(f"{r['id']}: 多数派が変化したが不安定圏 "
-                                f"「{b['default']}」({b['stability']})→「{r['default']}」({r['stability']})")
+                    soft.append(f"{r['id']}: majority flipped but within unstable zone "
+                                f"\"{b['default']}\" ({b['stability']}) → \"{r['default']}\" ({r['stability']})")
             elif r["stability"] < 0.8 <= b["stability"]:
-                hard.append(f"{r['id']}: 安定性低下 {b['stability']}→{r['stability']} {r['dist']}")
+                hard.append(f"{r['id']}: stability dropped {b['stability']} → {r['stability']} {r['dist']}")
         missing = [i for i in bmap if i not in {r['id'] for r in rows}]
         if missing:
-            info.append(f"未実行(ベースラインのみ): {', '.join(missing)}")
-        print(f"\n## ドリフト検知: ベースライン={base['model']} ({args.assert_base})")
+            info.append(f"not run (baseline only): {', '.join(missing)}")
+        print(f"\n## drift check: baseline={base['model']} ({args.assert_base})")
         for m in hard: print(f"  ★ {m}")
         for m in soft: print(f"  △ {m}")
         for m in info: print(f"  ・ {m}")
         if hard:
-            print(f"\nDRIFT: ★{len(hard)}件 → 指示の書き換え・委譲可否の再判断が必要 (exit 1)")
+            print(f"\nDRIFT: {len(hard)} ★ item(s) → rewrite instructions / re-judge delegation (exit 1)")
             sys.exit(1)
-        print(f"\nドリフトなし(★0件, △{len(soft)}件) (exit 0)")
+        print(f"\nno drift (★0, △{len(soft)}) (exit 0)")

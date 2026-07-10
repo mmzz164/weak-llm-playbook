@@ -34,11 +34,12 @@ def split_rows(rows):
 
 
 def render_model(model, profs):
-    out = [f"# 委譲ガイド: {model}", ""]
-    out.append("プロファイル(default_probe)からの自動生成。判断点の使い方 = "
-               "**実装不能**は委譲回避 / **揺れる**は必ず明示 / **安定**は意図と照合し、ズレる点だけ明示。")
+    out = [f"# Delegation guide: {model}", ""]
+    out.append("Auto-generated from default_probe profiles. How to read: "
+               "**not implementable** → avoid delegation / **unstable** → always specify / "
+               "**stable** → check against your intent and specify only the mismatches.")
     out.append("")
-    out.append("| バッテリー | mode | 判断点 | 実装不能 | 揺れる | 安定 | 出力tok/サンプル | 秒/サンプル |")
+    out.append("| battery | mode | points | not impl. | unstable | stable | out-tok/sample | sec/sample |")
     out.append("|---|---|---|---|---|---|---|---|")
     for prof in profs:
         ne, un, st = split_rows(prof["rows"])
@@ -55,24 +56,24 @@ def render_model(model, profs):
         b = battery_name(prof)
         ne, un, _ = split_rows(prof["rows"])
         sec_ne += [f"- [{b}] {r['id']}: {r['dist']}" for r in ne]
-        sec_un += [f"- [{b}] {r['id']}: {r['dist']} (安定性 {r['stability']})" for r in un]
+        sec_un += [f"- [{b}] {r['id']}: {r['dist']} (stability {r['stability']})" for r in un]
 
-    out.append("## 実装不能(明示しても救えない — 委譲回避か粒度昇降)")
-    out += sec_ne or ["- なし"]
+    out.append("## Not implementable (explicitness won't save it — avoid delegation or change granularity)")
+    out += sec_ne or ["- none"]
     out.append("")
-    out.append("## 必ず明示(揺れる — このモデルは既定を持たない)")
-    out += sec_un or ["- なし"]
+    out.append("## Must specify (unstable — the model has no default)")
+    out += sec_un or ["- none"]
     out.append("")
-    out.append("## 安定な既定 — 意図と照合するチェックリスト(ズレる項目だけ指示に書く)")
+    out.append("## Stable defaults — checklist to compare against your intent (write only the mismatches)")
     for prof in profs:
         _, _, st = split_rows(prof["rows"])
         if not st:
             continue
         out.append(f"### {battery_name(prof)}")
-        out += [f"- {r['id']} = 「{r['default']}」" for r in st]
+        out += [f"- {r['id']} = \"{r['default']}\"" for r in st]
         out.append("")
     out.append("---")
-    out.append("生成元プロファイル: " + " / ".join(
+    out.append("Source profiles: " + " / ".join(
         f"{battery_name(p)}(N={p.get('N', '?')}, {p.get('base', '?')})" for p in profs))
     out.append("")
     return "\n".join(out)
@@ -87,21 +88,21 @@ def build_cards(files):
 
 
 def main(argv=None):
-    ap = argparse.ArgumentParser(description="プロファイル群からモデルカード(委譲ガイド)をMarkdown生成")
-    ap.add_argument("files", nargs="*", help="default_probe が保存した profile_*.json")
-    ap.add_argument("--glob", action="append", default=[], help="プロファイルのglobパターン(複数可)")
-    ap.add_argument("-o", "--out", default=None, help="出力先ファイル(省略時は標準出力)")
+    ap = argparse.ArgumentParser(description="generate a Markdown delegation guide (model card) from profiles")
+    ap.add_argument("files", nargs="*", help="profile_*.json files saved by default_probe")
+    ap.add_argument("--glob", action="append", default=[], help="glob pattern(s) for profiles")
+    ap.add_argument("-o", "--out", default=None, help="output file (default: stdout)")
     args = ap.parse_args(argv)
     files = list(args.files)
     for g in args.glob:
         files += sorted(_glob.glob(g))
     files = [f for f in dict.fromkeys(files) if not f.endswith("_partial.json")]
     if not files:
-        ap.error("プロファイルJSONを指定してください(_partial は自動除外)")
+        ap.error("specify profile JSONs (_partial files are excluded automatically)")
     md = build_cards(files)
     if args.out:
         open(args.out, "w").write(md)
-        print(f"[保存] {args.out}", file=sys.stderr)
+        print(f"[saved] {args.out}", file=sys.stderr)
     else:
         print(md)
 

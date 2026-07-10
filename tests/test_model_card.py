@@ -24,14 +24,15 @@ chk("split", ([r["id"] for r in ne], [r["id"] for r in un], [r["id"] for r in st
 prof = {"model": "TestModel", "mode": "nothink", "N": 5, "base": "http://x", "domain": "io",
         "rows": rows}
 md = mc.render_model("TestModel", [prof])
-for want in ("# 委譲ガイド: TestModel", "| io | nothink | 3 | 1 | 1 | 1 |",
-             "## 実装不能", "- [io] c:", "## 必ず明示", "- [io] b:", "安定な既定", "- a = 「X」"):
-    chk(f"md has {want[:20]!r}", want in md, True)
+for want in ("# Delegation guide: TestModel", "| io | nothink | 3 | 1 | 1 | 1 |",
+             "## Not implementable", "- [io] c:", "## Must specify", "- [io] b:",
+             "Stable defaults", '- a = "X"'):
+    chk(f"md has {want[:24]!r}", want in md, True)
 
 # --- 同梱プロファイル全部でクラッシュしないこと(モデルごとにカードが出る) ---
 files = sorted(str(p) for p in (ROOT / "profiles").glob("profile_*.json"))
 out = mc.build_cards(files)
-chk("bundled_qwen", "# 委譲ガイド: Qwen3.6-27B-NVFP4" in out, True)
-chk("bundled_phi", "# 委譲ガイド: Phi-3.5-mini" in out, True)
+chk("bundled_qwen", "# Delegation guide: Qwen3.6-27B-NVFP4" in out, True)
+chk("bundled_phi", "# Delegation guide: Phi-3.5-mini" in out, True)
 
 finish("test_model_card")

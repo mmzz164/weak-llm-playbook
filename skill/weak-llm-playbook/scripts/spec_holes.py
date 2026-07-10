@@ -32,19 +32,19 @@ import argparse, os
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from llm_client import LLMClient, detect_model, find_json
 
-ap = argparse.ArgumentParser(description="タスク駆動スペック穴検出(任意エンドポイント対応)")
+ap = argparse.ArgumentParser(description="task-driven spec-hole detection (works against any endpoint)")
 ap.add_argument("task_file")
 ap.add_argument("fn_name")
 ap.add_argument("model", nargs="?", default=None,
-                help="省略(または\"\")で /v1/models から自動検出 (openai互換のみ)")
+                help="omit (or \"\") to auto-detect from /v1/models (OpenAI-compatible only)")
 ap.add_argument("base",  nargs="?", default="http://localhost:8000")
 ap.add_argument("k",     nargs="?", type=int, default=5)
-ap.add_argument("inputs", nargs="?", default=None, help="発注側プローブ入力のJSONファイル(推奨)")
+ap.add_argument("inputs", nargs="?", default=None, help="JSON file of user-supplied probe inputs (recommended)")
 ap.add_argument("--api", choices=["openai", "anthropic"], default="openai")
 ap.add_argument("--key", default=None)
 ap.add_argument("--kind", choices=["code", "json"], default="code",
-                help="code=関数実装(既定) / json=抽出・構造化タスク: 各入力テキストにK回実行し"
-                     "JSON出力のフィールド単位で発散を検出(fn_name は '-' でよい)")
+                help="code=function implementation (default) / json=extraction tasks: run the instruction "
+                     "K times per input text and detect field-level divergence (pass '-' as fn_name)")
 _argv = sys.argv[1:]
 if len(_argv) > 2 and _argv[2].startswith(("http://", "https://")):
     _argv.insert(2, "")   # 第3引数がURL = model省略とみなし繰り上げ
@@ -52,11 +52,11 @@ args = ap.parse_args(_argv)
 TASK_FILE, FN_NAME, MODEL, BASE, K = args.task_file, args.fn_name, args.model, args.base, args.k
 if not MODEL:
     if args.api == "anthropic":
-        ap.error("--api anthropic では model を明示してください(自動検出は openai互換の /v1/models のみ)")
+        ap.error("--api anthropic requires an explicit model (auto-detection uses the OpenAI-compatible /v1/models only)")
     _models = detect_model(BASE, args.key)
     MODEL = _models[0]
-    print(f"# model未指定 → {BASE}/v1/models から自動検出: {MODEL}"
-          + (f" (他{len(_models)-1}件)" if len(_models) > 1 else ""))
+    print(f"# model not specified → auto-detected from {BASE}/v1/models: {MODEL}"
+          + (f" (+{len(_models)-1} more)" if len(_models) > 1 else ""))
 
 TASK = open(TASK_FILE).read().strip()
 CLIENT = LLMClient(MODEL, BASE, api=args.api, key=args.key, think=False)
@@ -69,11 +69,11 @@ def gen(prompt, temperature, max_tokens=600):
 # JSON出力をフィールド単位で比較。実行間で値が割れたフィールド = 指示に書いていない仕様。
 if args.kind == "json":
     if not args.inputs:
-        print("!! --kind json では inputs.json(入力テキスト文字列の配列)が必須"); sys.exit(2)
+        print("!! --kind json requires inputs.json (an array of input text strings)"); sys.exit(2)
     texts = json.load(open(args.inputs))
     if not (isinstance(texts, list) and texts and all(isinstance(x, str) for x in texts)):
-        print("!! inputs.json は文字列(入力テキスト)の配列にしてください"); sys.exit(2)
-    print(f"# スペック穴検出(抽出モード): model={MODEL} K={K} 入力{len(texts)}件")
+        print("!! inputs.json must be an array of strings (input texts)"); sys.exit(2)
+    print(f"# spec-hole detection (extraction mode): model={MODEL} K={K} inputs={len(texts)}")
 
     total = bad = 0
     per_input = []
@@ -88,9 +88,9 @@ if args.kind == "json":
             else:
                 outs.append(j)
         per_input.append((doc, outs))
-    print(f"JSON取得: {total - bad}/{total} (パース失敗率 {bad / total:.0%})")
+    print(f"JSON parsed: {total - bad}/{total} (parse-failure rate {bad / total:.0%})")
     if bad / total >= 0.5:
-        print("!! パース失敗率50%超: 出力形式自体が崩れている(形式の明示強化か委譲回避を検討)")
+        print("!! parse-failure rate >50%: the output format itself is broken (strengthen format instructions or avoid delegation)")
 
     def canon(v):
         return json.dumps(v, ensure_ascii=False, sort_keys=True)
@@ -99,7 +99,7 @@ if args.kind == "json":
     for i, (doc, outs) in enumerate(per_input):
         label = doc[:24].replace("\n", " ")
         if len(outs) < 3:
-            print(f"  (入力#{i}「{label}…」: 有効出力{len(outs)}件<3 のため分析スキップ)")
+            print(f"  (input #{i} \"{label}…\": only {len(outs)} valid outputs (<3), skipped)")
             continue
         if all(isinstance(o, dict) for o in outs):
             for key in sorted(set().union(*[set(o) for o in outs])):
@@ -112,27 +112,27 @@ if args.kind == "json":
             (diverged if len(c) > 1 else consensus).append(
                 (i, label, "(全体)", c if len(c) > 1 else canon(outs[0])))
 
-    print("\n## [発散] 仕様の穴 — 実行間で値が割れたフィールド(必ず明示すべき)")
+    print("\n## [DIVERGED] spec holes — fields whose values differ across runs (must specify)")
     if not diverged:
-        print("  なし(この入力集合では割れなかった)")
+        print("  none (no divergence on this input set)")
     for i, label, key, c in diverged:
-        dist = " / ".join(f"「{v}」×{n}" for v, n in c.most_common())
-        print(f"  ★ 入力#{i}「{label}…」 {key} → {dist}")
-        print("     → 形式・欠損時の値・単位・解釈のどれが未指定かを決め、指示に例として固定せよ")
+        dist = " / ".join(f"\"{v}\" x{n}" for v, n in c.most_common())
+        print(f"  ★ input #{i} \"{label}…\" {key} → {dist}")
+        print("     → decide what's unspecified (format / missing value / unit / interpretation) and pin it with an example")
 
-    print("\n## [合意] 暗黙の一致挙動 — 意図と合うか照合せよ(合わなければ明示)")
+    print("\n## [AGREED] implicit consensus — check against your intent (specify if it differs)")
     for i, label, key, v in consensus:
-        print(f"  - 入力#{i} {key} → {v}")
+        print(f"  - input #{i} {key} → {v}")
 
     if diverged:
-        print("\n## 急所ブロック案 — 意図に合う行だけ残して、そのまま指示に貼る")
+        print("\n## spec-block suggestions — keep only the lines matching your intent and paste them into the instruction")
         for i, label, key, c in diverged:
-            print(f"  ★ 入力#{i}「{label}…」の {key}:")
+            print(f"  ★ input #{i} \"{label}…\" field {key}:")
             for v, n in c.most_common():
-                print(f"     ・「{key} は {v} とする(例: この入力では {v})」   # {n}/{sum(c.values())}回がこちら")
-        print("  ※ [合意]の値が意図と違う場合も、同じ形式で1行足すこと")
+                print(f"     - \"{key} shall be {v} (e.g. this input → {v})\"   # {n}/{sum(c.values())} runs")
+        print("  * if an [AGREED] value differs from your intent, add a line in the same format")
 
-    print(f"\nまとめ: 穴 {len(diverged)}件 / 合意 {len(consensus)}件 / パース失敗 {bad}/{total}")
+    print(f"\nsummary: {len(diverged)} hole(s) / {len(consensus)} agreed / parse failures {bad}/{total}")
     sys.exit(0)
 
 def extract_code(text):
@@ -154,7 +154,7 @@ def load_fn(code, name):
     return None, "NO_FUNC"
 
 # --- 1. K個の実装を生成 ---
-print(f"# スペック穴検出: fn={FN_NAME} model={MODEL} K={K}")
+print(f"# spec-hole detection: fn={FN_NAME} model={MODEL} K={K}")
 impls, broken, attempts = [], 0, 0
 MAX_ATTEMPTS = K * 3
 while len(impls) < K and attempts < MAX_ATTEMPTS:
@@ -168,11 +168,11 @@ while len(impls) < K and attempts < MAX_ATTEMPTS:
         continue
     impls.append(f)
 fail_rate = broken / attempts if attempts else 0
-print(f"実装取得: {len(impls)}/{K} (試行{attempts}回, ロード失敗{broken}回 = 実装不能率 {fail_rate:.0%})")
+print(f"implementations: {len(impls)}/{K} (attempts {attempts}, load failures {broken} = not-implementable rate {fail_rate:.0%})")
 if fail_rate >= 0.5:
-    print("!! 実装不能率50%超: このタスクはこのモデルには不安定(委譲回避か粒度昇降を検討)")
+    print("!! not-implementable rate >50%: this task is unstable on this model (avoid delegation or change granularity)")
 if len(impls) < 3:
-    print("!! 有効実装が3未満のため発散分析は不可")
+    print("!! fewer than 3 valid implementations; divergence analysis not possible")
     sys.exit(2)
 
 # --- 2. エッジ入力を収集(発注側ファイル優先 + ワーカー提案を補助的に合併) ---
@@ -183,9 +183,9 @@ if args.inputs:
         for a in json.load(open(args.inputs)):
             if isinstance(a, list):
                 inputs.append(a)
-        src.append(f"発注側{len(inputs)}個")
+        src.append(f"user-supplied {len(inputs)}")
     except Exception as e:
-        print(f"!! inputs.json の読込失敗: {e}"); sys.exit(2)
+        print(f"!! failed to read inputs.json: {e}"); sys.exit(2)
 ARGS_PROMPT = (TASK + f"\n\nこの仕様の関数 {FN_NAME} に対して、曖昧な点・境界・エッジケースを突く"
                "テスト入力(引数の組)を8個、JSON配列の配列だけで出力してください。"
                '例: [[[3,1,2], 2], [[], 0]]。コードや説明は不要、JSONのみ。')
@@ -205,10 +205,10 @@ for t in (0.3, 0.9):
     except Exception:
         pass
 if len(inputs) > n0:
-    src.append(f"ワーカー提案{len(inputs)-n0}個")
+    src.append(f"worker-proposed {len(inputs)-n0}")
 if not inputs:
-    print("!! エッジ入力なし: inputs.json を発注側で用意して再実行せよ"); sys.exit(2)
-print(f"エッジ入力: {len(inputs)}個({' + '.join(src)})")
+    print("!! no probe inputs: supply inputs.json and rerun"); sys.exit(2)
+print(f"probe inputs: {len(inputs)} ({' + '.join(src)})")
 
 # --- 3. 全実装 × 全入力 を実行し、挙動を比較 ---
 def behave(f, args):
@@ -223,9 +223,9 @@ matrix = {id(f): [behave(f, args) for args in inputs] for f in impls}
 alive = [f for f in impls if not all(b.startswith("EXC:") for b in matrix[id(f)])]
 dead = len(impls) - len(alive)
 if dead:
-    print(f"(全入力で例外の壊れ実装 {dead}個を発散分析から除外)")
+    print(f"(excluded {dead} broken implementation(s) that raised on every input)")
 if len(alive) < 3:
-    print("!! 生きた実装が3未満のため発散分析は不可"); sys.exit(2)
+    print("!! fewer than 3 live implementations; divergence analysis not possible"); sys.exit(2)
 
 diverged, consensus = [], []
 for j, args in enumerate(inputs):
@@ -237,25 +237,25 @@ for j, args in enumerate(inputs):
         consensus.append((args, behaviors[0]))
 
 # --- 4. レポート ---
-print("\n## [発散] 仕様の穴 — 実装間で挙動が割れた入力(必ず明示すべき)")
+print("\n## [DIVERGED] spec holes — inputs where implementations disagree (must specify)")
 if not diverged:
-    print("  なし(この入力集合では割れなかった)")
+    print("  none (no divergence on this input set)")
 for args, c in diverged:
-    dist = " / ".join(f"「{b}」×{n}" for b, n in c.most_common())
+    dist = " / ".join(f"\"{b}\" x{n}" for b, n in c.most_common())
     print(f"  ★ {FN_NAME}(*{args!r}) → {dist}")
-    print(f"     → どちらが意図か決め、急所ブロックに例として固定せよ")
+    print("     → decide which is intended and pin it with an example in the pitfalls block")
 
-print("\n## [合意] 暗黙の一致挙動 — 意図と合うか照合せよ(合わなければ明示)")
+print("\n## [AGREED] implicit consensus — check against your intent (specify if it differs)")
 for args, b in consensus:
     print(f"  - {FN_NAME}(*{args!r}) → {b}")
 
 if diverged:
-    print("\n## 急所ブロック案 — 意図に合う行だけ残して、指示の「急所」節に貼る")
+    print("\n## spec-block suggestions — keep only the lines matching your intent and paste them into the pitfalls section")
     for i, (args_, c) in enumerate(diverged, 1):
         call = f"{FN_NAME}({', '.join(repr(a) for a in args_)})"
-        print(f"  ★ 穴{i}: {call}")
+        print(f"  ★ hole {i}: {call}")
         for b, n in c.most_common():
-            print(f"     ・「{call} は {b} を返す」   # {n}/{len(alive)}実装がこちら")
-    print("  ※ [合意]の挙動が意図と違う場合も、同じ形式で1行足すこと")
+            print(f"     - \"{call} returns {b}\"   # {n}/{len(alive)} implementations")
+    print("  * if an [AGREED] behavior differs from your intent, add a line in the same format")
 
-print(f"\nまとめ: 穴 {len(diverged)}件 / 合意 {len(consensus)}件 / 実装不能率 {broken}/{K}")
+print(f"\nsummary: {len(diverged)} hole(s) / {len(consensus)} agreed / not-implementable {broken}/{K}")

@@ -57,9 +57,9 @@ def detect_model(base, key=None):
         r = json.load(urllib.request.urlopen(req, timeout=10))
         models = [m["id"] for m in r.get("data", []) if m.get("id")]
     except Exception as e:
-        raise RuntimeError(f"モデル自動検出に失敗 ({base}/v1/models): {e}。model引数を明示してください") from e
+        raise RuntimeError(f"model auto-detection failed ({base}/v1/models): {e}. Specify the model explicitly") from e
     if not models:
-        raise RuntimeError(f"{base}/v1/models が空。model引数を明示してください")
+        raise RuntimeError(f"{base}/v1/models returned no models. Specify the model explicitly")
     return models
 
 
@@ -111,7 +111,7 @@ class LLMClient:
     # --- Anthropic Messages 形式 ---
     def _anthropic(self, prompt, temperature, max_tokens):
         if not self.key:
-            raise RuntimeError("api=anthropic には --key か ANTHROPIC_API_KEY 等が必要")
+            raise RuntimeError("api=anthropic requires --key or ANTHROPIC_API_KEY (etc.)")
         headers = {"x-api-key": self.key,
                    "Authorization": f"Bearer {self.key}",
                    "anthropic-version": "2023-06-01"}
