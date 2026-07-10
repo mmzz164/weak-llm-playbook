@@ -1,0 +1,74 @@
+{
+ "pack": "inst_en",
+ "description": "English instruction-following meta battery (9 points). Do output contracts, prohibitions, conflicting instructions, constraint position, and count/length limits bind on this model? The language-constraint probes ask for Japanese output (deterministically detectable), mirroring the Japanese pack which asks for English.",
+ "probes": [
+  {"id": "meta_negation", "kind": "text",
+   "q": "Write Python code that removes duplicates from a list. Do not use set. Output code only.",
+   "classify": [
+    {"label": "violates prohibition (uses set)", "regex": "set\\s*\\("}
+   ],
+   "fallback": "honors prohibition"},
+
+  {"id": "meta_contract_done", "kind": "text",
+   "q": "Calculate 1+1. Output only the single digit 2 and nothing else.",
+   "classify": [
+    {"label": "contract honored (bare 2)", "regex": "\\A\\s*2\\s*\\Z"},
+    {"label": "extra output added", "contains": "2"}
+   ],
+   "fallback": "other"},
+
+  {"id": "meta_conflict_order", "kind": "text",
+   "q": "Summarize the following text as exactly 3 bullet points.\n\nThe rise of remote work has significantly changed how companies use office space. Many firms have abolished fixed desks in favor of hot-desking. At the same time, surveys show that spontaneous face-to-face conversations have declined, making cross-departmental information sharing harder.\n\nActually, do not use bullet points — summarize it in a single sentence instead.",
+   "classify": [
+    {"label": "follows earlier instruction (bullets)", "regex": "(?m)^\\s*([-*•]|\\d+[.)])"},
+    {"label": "follows later instruction (one sentence)", "len_lt": 220}
+   ],
+   "fallback": "other (long prose)"},
+
+  {"id": "meta_late_constraint", "kind": "text",
+   "q": "Summarize the following text in one sentence.\n\nThe rise of remote work has significantly changed how companies use office space. Many firms have abolished fixed desks in favor of hot-desking. At the same time, surveys show that spontaneous face-to-face conversations have declined, making cross-departmental information sharing harder.\n\nNote: write the summary in Japanese.",
+   "classify": [
+    {"label": "constraint honored (Japanese)", "regex": "(?s)(?:[ぁ-んァ-ヶ一-龠].*?){8,}"}
+   ],
+   "fallback": "constraint ignored (English)"},
+
+  {"id": "meta_early_constraint", "kind": "text",
+   "q": "Note: write the summary in Japanese.\n\nSummarize the following text in one sentence.\n\nThe rise of remote work has significantly changed how companies use office space. Many firms have abolished fixed desks in favor of hot-desking. At the same time, surveys show that spontaneous face-to-face conversations have declined, making cross-departmental information sharing harder.",
+   "classify": [
+    {"label": "constraint honored (Japanese)", "regex": "(?s)(?:[ぁ-んァ-ヶ一-龠].*?){8,}"}
+   ],
+   "fallback": "constraint ignored (English)"},
+
+  {"id": "meta_length_limit", "kind": "text",
+   "q": "Summarize the following text in 100 characters or fewer.\n\nThe rise of remote work has significantly changed how companies use office space. Many firms have abolished fixed desks in favor of hot-desking. At the same time, surveys show that spontaneous face-to-face conversations have declined, making cross-departmental information sharing harder. In response, a growing number of companies are adopting hybrid schedules with two or three fixed office days per week.",
+   "classify": [
+    {"label": "limit honored (<=110 chars)", "len_lt": 111},
+    {"label": "slightly over (<=200 chars)", "len_lt": 201}
+   ],
+   "fallback": "far over (>200 chars)"},
+
+  {"id": "meta_forbidden_word", "kind": "text",
+   "q": "Describe the taste of coffee in three sentences. Do not use the word \"bitter\".",
+   "classify": [
+    {"label": "uses forbidden word (bitter)", "regex": "(?i)\\bbitter\\b"},
+    {"label": "evades with a variant (bitterness etc.)", "regex": "(?i)bitter"}
+   ],
+   "fallback": "honors prohibition"},
+
+  {"id": "meta_steps_exact", "kind": "text",
+   "q": "Output the steps for brewing tea as a numbered list of exactly 4 items.",
+   "classify": [
+    {"label": "count violated (5+)", "regex": "(?m)^\\s*5[.)]"},
+    {"label": "exactly 4 items (honored)", "regex": "(?m)^\\s*4[.)]"},
+    {"label": "count violated (<4)", "regex": "(?m)^\\s*\\d[.)]"}
+   ],
+   "fallback": "not a list"},
+
+  {"id": "meta_dont_explain", "kind": "text",
+   "q": "Output only the fixed code for the following buggy Python function. Do not write any explanation.\n\ndef add(a, b):\n    return a - b",
+   "classify": [
+    {"label": "with explanation", "regex": "(?m)^[A-Z][^`\\n]{15,}\\.\\s*$"}
+   ],
+   "fallback": "code only (honored)"}
+ ]
+}

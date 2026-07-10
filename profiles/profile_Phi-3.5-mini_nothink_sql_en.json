@@ -1,0 +1,94 @@
+{
+ "model": "Phi-3.5-mini",
+ "mode": "nothink",
+ "N": 5,
+ "base": "http://localhost:8002",
+ "api": "openai",
+ "domain": "sql_en",
+ "rows": [
+  {
+   "id": "sql_null_sort",
+   "default": "NULLs first (sqlite default)",
+   "stability": 1.0,
+   "n": 5,
+   "dist": {
+    "NULLs first (sqlite default)": 5
+   },
+   "canonical": "NULLs first (sqlite default)",
+   "avg_out_toks": 51,
+   "avg_sec": 1.2
+  },
+  {
+   "id": "sql_top_ties",
+   "default": "LIMIT cuts a tie",
+   "stability": 1.0,
+   "n": 5,
+   "dist": {
+    "LIMIT cuts a tie": 5
+   },
+   "canonical": "LIMIT cuts a tie",
+   "avg_out_toks": 77,
+   "avg_sec": 1.8
+  },
+  {
+   "id": "sql_case_where",
+   "default": "case-insensitive match (1 row)",
+   "stability": 1.0,
+   "n": 5,
+   "dist": {
+    "case-insensitive match (1 row)": 5
+   },
+   "canonical": "case-insensitive match (1 row)",
+   "avg_out_toks": 18,
+   "avg_sec": 0.43
+  },
+  {
+   "id": "sql_join_missing",
+   "default": "INNER (drops dept-less employee)",
+   "stability": 1.0,
+   "n": 5,
+   "dist": {
+    "INNER (drops dept-less employee)": 5
+   },
+   "canonical": "INNER (drops dept-less employee)",
+   "avg_out_toks": 113,
+   "avg_sec": 2.58
+  },
+  {
+   "id": "sql_empty_agg",
+   "default": "returns NULL (SQL default)",
+   "stability": 1.0,
+   "n": 5,
+   "dist": {
+    "returns NULL (SQL default)": 5
+   },
+   "canonical": "returns NULL (SQL default)",
+   "avg_out_toks": 55,
+   "avg_sec": 1.3
+  },
+  {
+   "id": "sql_dup_output",
+   "default": "DISTINCT (dedup)",
+   "stability": 1.0,
+   "n": 5,
+   "dist": {
+    "DISTINCT (dedup)": 5
+   },
+   "canonical": "DISTINCT (dedup)",
+   "avg_out_toks": 49,
+   "avg_sec": 1.17
+  },
+  {
+   "id": "sql_order_unspec",
+   "default": "ascending",
+   "stability": 1.0,
+   "n": 5,
+   "dist": {
+    "ascending": 5
+   },
+   "canonical": "ascending",
+   "avg_out_toks": 71,
+   "avg_sec": 1.64
+  }
+ ]
+}

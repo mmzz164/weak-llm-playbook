@@ -1,0 +1,93 @@
+{
+ "pack": "sql_en",
+ "description": "English SQL-domain battery (7 points, executed on in-memory sqlite). NULL sort order, top-N ties, case-sensitive matching, JOIN dropping unmatched rows, empty-set aggregates, duplicate output, and default sort direction. Same tables/classification as sql_ja; only the prompt language differs.",
+ "probes": [
+  {"id": "sql_null_sort", "kind": "sql",
+   "q": "Table items(name TEXT, price INTEGER). Write a SQLite query that returns only the names, ordered from cheapest to most expensive. Output SQL only.",
+   "setup": [
+    "CREATE TABLE items(name TEXT, price INTEGER)",
+    "INSERT INTO items VALUES ('a',300),('b',NULL),('c',100)"
+   ],
+   "classify": [
+    {"label": "NULLs first (sqlite default)", "col0": ["b", "c", "a"]},
+    {"label": "NULLs last (explicit handling)", "col0": ["c", "a", "b"]},
+    {"label": "NULL rows excluded", "col0": ["c", "a"]}
+   ],
+   "fallback": "other"},
+
+  {"id": "sql_top_ties", "kind": "sql",
+   "q": "Table scores(name TEXT, score INTEGER). Write a SQLite query that returns the names of the top 2 scores. Output SQL only.",
+   "setup": [
+    "CREATE TABLE scores(name TEXT, score INTEGER)",
+    "INSERT INTO scores VALUES ('a',90),('b',80),('c',80),('d',70)"
+   ],
+   "classify": [
+    {"label": "LIMIT cuts a tie", "row_count": 2},
+    {"label": "ties included (3 rows)", "row_count": 3}
+   ],
+   "fallback": "other"},
+
+  {"id": "sql_case_where", "kind": "sql",
+   "q": "Table users(name TEXT). Write a SQLite query that returns the number of rows whose name is alice. Output SQL only.",
+   "setup": [
+    "CREATE TABLE users(name TEXT)",
+    "INSERT INTO users VALUES ('Alice'),('bob')"
+   ],
+   "classify": [
+    {"label": "case-sensitive (0 rows)", "rows": [[0]]},
+    {"label": "case-insensitive match (1 row)", "rows": [[1]]}
+   ],
+   "fallback": "other"},
+
+  {"id": "sql_join_missing", "kind": "sql",
+   "q": "Tables emp(name TEXT, dept_id INTEGER) and dept(id INTEGER, dname TEXT). Write a SQLite query that lists employee names with their department names. Output SQL only.",
+   "setup": [
+    "CREATE TABLE emp(name TEXT, dept_id INTEGER)",
+    "CREATE TABLE dept(id INTEGER, dname TEXT)",
+    "INSERT INTO emp VALUES ('a',1),('b',NULL)",
+    "INSERT INTO dept VALUES (1,'sales')"
+   ],
+   "classify": [
+    {"label": "INNER (drops dept-less employee)", "row_count": 1},
+    {"label": "LEFT (keeps with NULL)", "row_count": 2}
+   ],
+   "fallback": "other"},
+
+  {"id": "sql_empty_agg", "kind": "sql",
+   "q": "Table prods(name TEXT, price INTEGER, stock INTEGER). Write a SQLite query that returns the highest price among products with stock of 1 or more. Output SQL only.",
+   "setup": [
+    "CREATE TABLE prods(name TEXT, price INTEGER, stock INTEGER)",
+    "INSERT INTO prods VALUES ('x',100,0)"
+   ],
+   "classify": [
+    {"label": "returns NULL (SQL default)", "rows": [[null]]},
+    {"label": "coalesced to 0", "rows": [[0]]},
+    {"label": "no rows", "row_count": 0}
+   ],
+   "fallback": "other"},
+
+  {"id": "sql_dup_output", "kind": "sql",
+   "q": "Table purchases(buyer TEXT, item TEXT). Write a SQLite query that returns the list of buyer names. Output SQL only.",
+   "setup": [
+    "CREATE TABLE purchases(buyer TEXT, item TEXT)",
+    "INSERT INTO purchases VALUES ('a','x'),('a','y'),('b','x')"
+   ],
+   "classify": [
+    {"label": "DISTINCT (dedup)", "row_count": 2},
+    {"label": "duplicates kept", "row_count": 3}
+   ],
+   "fallback": "other"},
+
+  {"id": "sql_order_unspec", "kind": "sql",
+   "q": "Table t(name TEXT). Write a SQLite query that returns the names sorted. Output SQL only.",
+   "setup": [
+    "CREATE TABLE t(name TEXT)",
+    "INSERT INTO t VALUES ('b'),('a'),('c')"
+   ],
+   "classify": [
+    {"label": "ascending", "col0": ["a", "b", "c"]},
+    {"label": "descending", "col0": ["c", "b", "a"]}
+   ],
+   "fallback": "other"}
+ ]
+}

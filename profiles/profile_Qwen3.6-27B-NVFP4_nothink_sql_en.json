@@ -1,0 +1,95 @@
+{
+ "model": "Qwen3.6-27B-NVFP4",
+ "mode": "nothink",
+ "N": 5,
+ "base": "http://localhost:8000",
+ "api": "openai",
+ "domain": "sql_en",
+ "rows": [
+  {
+   "id": "sql_null_sort",
+   "default": "NULLs first (sqlite default)",
+   "stability": 1.0,
+   "n": 5,
+   "dist": {
+    "NULLs first (sqlite default)": 5
+   },
+   "canonical": "NULLs first (sqlite default)",
+   "avg_out_toks": 10,
+   "avg_sec": 0.23
+  },
+  {
+   "id": "sql_top_ties",
+   "default": "LIMIT cuts a tie",
+   "stability": 1.0,
+   "n": 5,
+   "dist": {
+    "LIMIT cuts a tie": 5
+   },
+   "canonical": "LIMIT cuts a tie",
+   "avg_out_toks": 18,
+   "avg_sec": 0.39
+  },
+  {
+   "id": "sql_case_where",
+   "default": "case-sensitive (0 rows)",
+   "stability": 1.0,
+   "n": 5,
+   "dist": {
+    "case-sensitive (0 rows)": 5
+   },
+   "canonical": "case-sensitive (0 rows)",
+   "avg_out_toks": 13,
+   "avg_sec": 0.29
+  },
+  {
+   "id": "sql_join_missing",
+   "default": "INNER (drops dept-less employee)",
+   "stability": 1.0,
+   "n": 5,
+   "dist": {
+    "INNER (drops dept-less employee)": 5
+   },
+   "canonical": "INNER (drops dept-less employee)",
+   "avg_out_toks": 28,
+   "avg_sec": 0.59
+  },
+  {
+   "id": "sql_empty_agg",
+   "default": "returns NULL (SQL default)",
+   "stability": 1.0,
+   "n": 5,
+   "dist": {
+    "returns NULL (SQL default)": 5
+   },
+   "canonical": "returns NULL (SQL default)",
+   "avg_out_toks": 19,
+   "avg_sec": 0.41
+  },
+  {
+   "id": "sql_dup_output",
+   "default": "DISTINCT (dedup)",
+   "stability": 0.86,
+   "n": 7,
+   "dist": {
+    "DISTINCT (dedup)": 6,
+    "duplicates kept": 1
+   },
+   "canonical": "DISTINCT (dedup)",
+   "avg_out_toks": 7,
+   "avg_sec": 0.18
+  },
+  {
+   "id": "sql_order_unspec",
+   "default": "ascending",
+   "stability": 1.0,
+   "n": 5,
+   "dist": {
+    "ascending": 5
+   },
+   "canonical": "ascending",
+   "avg_out_toks": 10,
+   "avg_sec": 0.24
+  }
+ ]
+}

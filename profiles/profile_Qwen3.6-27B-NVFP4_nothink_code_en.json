@@ -1,0 +1,383 @@
+{
+ "model": "Qwen3.6-27B-NVFP4",
+ "mode": "nothink",
+ "N": 5,
+ "base": "http://localhost:8000",
+ "api": "openai",
+ "domain": "code_en",
+ "rows": [
+  {
+   "id": "interval_touch",
+   "default": "touching merged",
+   "stability": 1.0,
+   "n": 5,
+   "dist": {
+    "touching merged": 5
+   },
+   "canonical": "touching merged",
+   "avg_out_toks": 120,
+   "avg_sec": 3.7
+  },
+  {
+   "id": "round_half",
+   "default": "half-up (2.5→3)",
+   "stability": 1.0,
+   "n": 5,
+   "dist": {
+    "half-up (2.5→3)": 5
+   },
+   "canonical": "half-up (2.5→3)",
+   "avg_out_toks": 41,
+   "avg_sec": 1.37
+  },
+  {
+   "id": "avg_empty",
+   "default": "returns 0",
+   "stability": 0.8,
+   "n": 15,
+   "dist": {
+    "returns 0": 12,
+    "raises": 3
+   },
+   "canonical": "returns 0",
+   "avg_out_toks": 33,
+   "avg_sec": 1.11
+  },
+  {
+   "id": "dedup_order",
+   "default": "order preserved",
+   "stability": 1.0,
+   "n": 5,
+   "dist": {
+    "order preserved": 5
+   },
+   "canonical": "order preserved",
+   "avg_out_toks": 27,
+   "avg_sec": 0.92
+  },
+  {
+   "id": "topn_short",
+   "default": "returns all when short",
+   "stability": 1.0,
+   "n": 5,
+   "dist": {
+    "returns all when short": 5
+   },
+   "canonical": "returns all when short",
+   "avg_out_toks": 24,
+   "avg_sec": 0.82
+  },
+  {
+   "id": "split_case",
+   "default": "case-insensitive",
+   "stability": 1.0,
+   "n": 5,
+   "dist": {
+    "case-insensitive": 5
+   },
+   "canonical": "case-insensitive",
+   "avg_out_toks": 61,
+   "avg_sec": 2.03
+  },
+  {
+   "id": "fib_index",
+   "default": "fib(0)=0,fib(1)=1,fib(2)=1",
+   "stability": 1.0,
+   "n": 5,
+   "dist": {
+    "fib(0)=0,fib(1)=1,fib(2)=1": 5
+   },
+   "canonical": "fib(0)=0,fib(1)=1,fib(2)=1",
+   "avg_out_toks": 77,
+   "avg_sec": 2.52
+  },
+  {
+   "id": "palindrome_norm",
+   "default": "strict comparison",
+   "stability": 1.0,
+   "n": 5,
+   "dist": {
+    "strict comparison": 5
+   },
+   "canonical": "strict comparison",
+   "avg_out_toks": 26,
+   "avg_sec": 0.88
+  },
+  {
+   "id": "neg_modulo",
+   "default": "python-style (2)",
+   "stability": 1.0,
+   "n": 5,
+   "dist": {
+    "python-style (2)": 5
+   },
+   "canonical": "python-style (2)",
+   "avg_out_toks": 18,
+   "avg_sec": 0.63
+  },
+  {
+   "id": "div_zero",
+   "default": "raises (ZeroDiv)",
+   "stability": 1.0,
+   "n": 5,
+   "dist": {
+    "raises (ZeroDiv)": 5
+   },
+   "canonical": "raises (ZeroDiv)",
+   "avg_out_toks": 18,
+   "avg_sec": 0.62
+  },
+  {
+   "id": "range_incl",
+   "default": "end inclusive",
+   "stability": 1.0,
+   "n": 5,
+   "dist": {
+    "end inclusive": 5
+   },
+   "canonical": "end inclusive",
+   "avg_out_toks": 25,
+   "avg_sec": 0.84
+  },
+  {
+   "id": "sort_case",
+   "default": "ASCII order (uppercase first)",
+   "stability": 1.0,
+   "n": 5,
+   "dist": {
+    "ASCII order (uppercase first)": 5
+   },
+   "canonical": "ASCII order (uppercase first)",
+   "avg_out_toks": 21,
+   "avg_sec": 0.71
+  },
+  {
+   "id": "split_multi",
+   "default": "collapses whitespace",
+   "stability": 1.0,
+   "n": 5,
+   "dist": {
+    "collapses whitespace": 5
+   },
+   "canonical": "collapses whitespace",
+   "avg_out_toks": 16,
+   "avg_sec": 0.56
+  },
+  {
+   "id": "empty_split",
+   "default": "empty list",
+   "stability": 1.0,
+   "n": 5,
+   "dist": {
+    "empty list": 5
+   },
+   "canonical": "empty list",
+   "avg_out_toks": 17,
+   "avg_sec": 0.59
+  },
+  {
+   "id": "missing_key",
+   "default": "raises (KeyError)",
+   "stability": 1.0,
+   "n": 5,
+   "dist": {
+    "raises (KeyError)": 5
+   },
+   "canonical": "raises (KeyError)",
+   "avg_out_toks": 18,
+   "avg_sec": 0.62
+  },
+  {
+   "id": "flatten",
+   "default": "deep flatten",
+   "stability": 1.0,
+   "n": 5,
+   "dist": {
+    "deep flatten": 5
+   },
+   "canonical": "deep flatten",
+   "avg_out_toks": 57,
+   "avg_sec": 1.87
+  },
+  {
+   "id": "nth_index",
+   "default": "0-indexed",
+   "stability": 1.0,
+   "n": 5,
+   "dist": {
+    "0-indexed": 5
+   },
+   "canonical": "0-indexed",
+   "avg_out_toks": 19,
+   "avg_sec": 0.67
+  },
+  {
+   "id": "none_input",
+   "default": "例外(TypeError)",
+   "stability": 1.0,
+   "n": 5,
+   "dist": {
+    "例外(TypeError)": 5
+   },
+   "canonical": "例外(TypeError)",
+   "avg_out_toks": 17,
+   "avg_sec": 0.6
+  },
+  {
+   "id": "reverse_default",
+   "default": "ascending",
+   "stability": 1.0,
+   "n": 5,
+   "dist": {
+    "ascending": 5
+   },
+   "canonical": "ascending",
+   "avg_out_toks": 19,
+   "avg_sec": 0.66
+  },
+  {
+   "id": "title_case",
+   "default": "capitalize each word",
+   "stability": 1.0,
+   "n": 5,
+   "dist": {
+    "capitalize each word": 5
+   },
+   "canonical": "capitalize each word",
+   "avg_out_toks": 17,
+   "avg_sec": 0.6
+  },
+  {
+   "id": "clamp_pct",
+   "default": "0-100 scale",
+   "stability": 1.0,
+   "n": 5,
+   "dist": {
+    "0-100 scale": 5
+   },
+   "canonical": "0-100 scale",
+   "avg_out_toks": 20,
+   "avg_sec": 0.68
+  },
+  {
+   "id": "int_div",
+   "default": "float(1.5)",
+   "stability": 1.0,
+   "n": 5,
+   "dist": {
+    "float(1.5)": 5
+   },
+   "canonical": "float(1.5)",
+   "avg_out_toks": 35,
+   "avg_sec": 1.15
+  },
+  {
+   "id": "slice_oob",
+   "default": "clamps (returns all)",
+   "stability": 1.0,
+   "n": 5,
+   "dist": {
+    "clamps (returns all)": 5
+   },
+   "canonical": "clamps (returns all)",
+   "avg_out_toks": 19,
+   "avg_sec": 0.66
+  },
+  {
+   "id": "neg_index",
+   "default": "negative index allowed (tail)",
+   "stability": 1.0,
+   "n": 5,
+   "dist": {
+    "negative index allowed (tail)": 5
+   },
+   "canonical": "negative index allowed (tail)",
+   "avg_out_toks": 18,
+   "avg_sec": 0.62
+  },
+  {
+   "id": "strip_parse",
+   "default": "strips whitespace then parses",
+   "stability": 1.0,
+   "n": 5,
+   "dist": {
+    "strips whitespace then parses": 5
+   },
+   "canonical": "strips whitespace then parses",
+   "avg_out_toks": 21,
+   "avg_sec": 0.72
+  },
+  {
+   "id": "bool_case",
+   "default": "case-insensitive True",
+   "stability": 1.0,
+   "n": 5,
+   "dist": {
+    "case-insensitive True": 5
+   },
+   "canonical": "case-insensitive True",
+   "avg_out_toks": 56,
+   "avg_sec": 1.87
+  },
+  {
+   "id": "date_fmt",
+   "default": "ISO (zero-padded)",
+   "stability": 1.0,
+   "n": 5,
+   "dist": {
+    "ISO (zero-padded)": 5
+   },
+   "canonical": "ISO (zero-padded)",
+   "avg_out_toks": 35,
+   "avg_sec": 1.18
+  },
+  {
+   "id": "round_ndigits",
+   "default": "2 decimals",
+   "stability": 1.0,
+   "n": 5,
+   "dist": {
+    "2 decimals": 5
+   },
+   "canonical": "2 decimals",
+   "avg_out_toks": 23,
+   "avg_sec": 0.78
+  },
+  {
+   "id": "max_empty",
+   "default": "例外(ValueError)",
+   "stability": 1.0,
+   "n": 5,
+   "dist": {
+    "例外(ValueError)": 5
+   },
+   "canonical": "例外(ValueError)",
+   "avg_out_toks": 16,
+   "avg_sec": 0.56
+  },
+  {
+   "id": "dup_count",
+   "default": "他(5)",
+   "stability": 1.0,
+   "n": 5,
+   "dist": {
+    "他(5)": 5
+   },
+   "canonical": "他(5)",
+   "avg_out_toks": 41,
+   "avg_sec": 1.36
+  },
+  {
+   "id": "capitalize_rest",
+   "default": "first letter only (rest kept)",
+   "stability": 1.0,
+   "n": 5,
+   "dist": {
+    "first letter only (rest kept)": 5
+   },
+   "canonical": "first letter only (rest kept)",
+   "avg_out_toks": 34,
+   "avg_sec": 1.13
+  }
+ ]
+}

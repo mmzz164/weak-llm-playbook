@@ -83,9 +83,10 @@ if not MODEL:
 THINK = args.mode in ("1", "think", "true")
 CLIENT = LLMClient(MODEL, BASE, api=args.api, key=args.key, think=THINK)
 
-def gen(prompt, temperature, code=True):
+def gen(prompt, temperature, code=True, suffix=None):
     if code:
-        return CLIENT.chat(prompt + "\nコードのみ出力。説明・テスト不要。",
+        sfx = "\nコードのみ出力。説明・テスト不要。" if suffix is None else suffix
+        return CLIENT.chat(prompt + sfx,
                            temperature=temperature, max_tokens=2000 if THINK else 400)
     # textプローブ: 出力指示はプローブ文自身が持つ。要約・返信が切れないよう上限は広め
     return CLIENT.chat(prompt, temperature=temperature, max_tokens=2000 if THINK else 600)
@@ -702,9 +703,32 @@ def _compile_sql(setup, rules, fallback):
     return classify
 
 def load_pack(path):
+    """パック読込。各プローブは text/sql/code の宣言的定義か、"builtin" で組み込み判断点を参照
+    (q=プロンプトだけ差し替え可能=言語ポートが軽い)。"label_map" で分類ラベルを翻訳、
+    パック直下の "code_suffix" で codeプローブの追記文(既定は日本語)を差し替え。"""
     pk = json.load(open(path))
+    builtin = {b["id"]: b for b in PROBES + PROBES_IO}
+    sfx = pk.get("code_suffix")
     probes = []
     for p in pk["probes"]:
+        if "builtin" in p:
+            base = builtin.get(p["builtin"])
+            if base is None:
+                raise SystemExit(f"{path}: builtin '{p['builtin']}' は存在しない")
+            lm = p.get("label_map") or {}
+            def _wrap(cl=base["classify"], lm=lm):
+                def g(x):
+                    y = cl(x)
+                    return lm.get(y, y)
+                return g
+            d = dict(base)
+            d["id"] = p.get("id", base["id"])
+            d["q"] = p.get("q", base["q"])
+            d["classify"] = _wrap()
+            if sfx is not None and d.get("kind") != "text":
+                d["suffix"] = sfx
+            probes.append(d)
+            continue
         kind = p.get("kind", "text")
         if kind == "text":
             probes.append(dict(id=p["id"], q=p["q"], kind="text",
@@ -714,8 +738,11 @@ def load_pack(path):
                                classify=_compile_sql(p["setup"], p["classify"],
                                                      p.get("fallback", "他"))))
         else:
-            probes.append(dict(id=p["id"], q=p["q"], names=p.get("names", []),
-                               classify=_compile_code(p["cases"], p.get("fallback", "他"))))
+            d = dict(id=p["id"], q=p["q"], names=p.get("names", []),
+                     classify=_compile_code(p["cases"], p.get("fallback", "他")))
+            if sfx is not None:
+                d["suffix"] = sfx
+            probes.append(d)
     name = pk.get("pack") or os.path.splitext(os.path.basename(path))[0]
     return name, probes
 
@@ -723,7 +750,7 @@ def _one(p, temp):
     try:
         if p.get("kind") == "text":
             return p["classify"](gen(p["q"], temp, code=False))
-        code = extract_code(gen(p["q"], temp))
+        code = extract_code(gen(p["q"], temp, suffix=p.get("suffix")))
         fn, err = load_fn(code, p["names"])
         return err if fn is None else p["classify"](fn)
     except Exception as e:

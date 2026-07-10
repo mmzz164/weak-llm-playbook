@@ -28,9 +28,9 @@ Full experiment log: [docs/FINDINGS.md](docs/FINDINGS.md).
 ### 1. `default_probe.py` — default-behavior profiler
 
 Sends "minimal tasks with exactly one unspecified decision" × N runs and classifies which
-default the model chose. Two batteries (50 decision points total):
+default the model chose. Two batteries (49 decision points total):
 
-- `--domain code` (default, 32 points): **executes** the generated code to classify
+- `--domain code` (default, 31 points): **executes** the generated code to classify
 - `--domain io` (18 points): non-coding decisions — structured output (JSON/CSV),
   extraction/interpretation, writing style, and dialogue meta-behavior (ask back vs
   proceed on missing info) — classified deterministically from the output text
@@ -38,14 +38,18 @@ default the model chose. Two batteries (50 decision points total):
 - `--probes pack.json`: **your own battery**, defined declaratively in JSON — no code
   changes needed. Rules cover regex/contains/length checks, JSON parsing and field
   matchers, result/exception cases for executed Python, and (`kind: "sql"`) executing
-  generated SQL against an in-memory sqlite DB. Bundled packs:
-  - `packs/io_en.json` — English port of the io battery (16 points)
-  - `packs/inst_ja.json` — **instruction-following meta** (9 points): do output contracts,
-    prohibitions, conflicting instructions, constraint position, and count/length limits
-    actually bind on this model? (i.e., does the 5-block template's "output contract" work)
-  - `packs/sql_ja.json` — **SQL domain** (7 points): NULL sort order, top-N ties,
-    case-sensitive matching, JOIN dropping unmatched rows, empty-set aggregates,
-    duplicate output, default sort direction
+  generated SQL against an in-memory sqlite DB. A pack entry can also reference a
+  built-in probe via `"builtin"` and swap only the prompt (with `label_map` translating
+  labels), which makes **language ports cheap**. Bundled packs (Japanese/English pairs):
+  - **instruction-following meta** (9 points): `packs/inst_ja.json` / `packs/inst_en.json` —
+    do output contracts, prohibitions, conflicting instructions, constraint position, and
+    count/length limits actually bind on this model? (i.e., does the 5-block template's
+    "output contract" work)
+  - **SQL domain** (7 points): `packs/sql_ja.json` / `packs/sql_en.json` — NULL sort order,
+    top-N ties, case-sensitive matching, JOIN dropping unmatched rows, empty-set
+    aggregates, duplicate output, default sort direction
+  - **English io/code**: `packs/io_en.json` (16 points) / `packs/code_en.json` (the full
+    built-in coding battery, 31 points, via builtin references)
 - Profiles now also record `avg_out_toks` / `avg_sec` per probe — a rough
   delegation-cost axis for comparing models.
 
@@ -95,7 +99,16 @@ Defaults also depend on the **prompt language**: on the same Qwen3.6, date extra
 stably ISO with Japanese prompts (0.86) but a coin flip between ISO and "as written" with
 English prompts (0.53), and the 3-to-5 range flips from stable-midpoint to
 midpoint-vs-range-kept. Measure your profile in the language you actually delegate in —
-that is exactly what `--probes packs/io_en.json` is for.
+that is exactly what the `*_en` / `*_ja` pack pairs are for.
+
+The language effect goes far beyond formatting — **instruction-following itself is
+language-bound, and the weaker the model the stronger the effect**. Phi-3.5-mini with
+Japanese prompts violates a "do not use set" prohibition 40% of the time, ignores
+"write in English" completely, and can't produce runnable SQL on 2/7 probes; with English
+prompts every one of those failures disappears (all 1.0 compliant). Qwen3.6 is steadier,
+but three of its coding defaults that waver under Japanese prompts become perfectly
+stable in English. A model's good English benchmark behavior tells you nothing about
+how it behaves when you delegate in another language — profile both.
 
 The report has four categories:
 - **Not implementable** (majority of runs error) → explicitness can't save it; avoid delegation

@@ -1,0 +1,118 @@
+{
+ "model": "Qwen3.6-27B-NVFP4",
+ "mode": "nothink",
+ "N": 5,
+ "base": "http://localhost:8000",
+ "api": "openai",
+ "domain": "inst_en",
+ "rows": [
+  {
+   "id": "meta_negation",
+   "default": "honors prohibition",
+   "stability": 1.0,
+   "n": 5,
+   "dist": {
+    "honors prohibition": 5
+   },
+   "canonical": "honors prohibition",
+   "avg_out_toks": 41,
+   "avg_sec": 0.82
+  },
+  {
+   "id": "meta_contract_done",
+   "default": "contract honored (bare 2)",
+   "stability": 1.0,
+   "n": 5,
+   "dist": {
+    "contract honored (bare 2)": 5
+   },
+   "canonical": "contract honored (bare 2)",
+   "avg_out_toks": 2,
+   "avg_sec": 0.09
+  },
+  {
+   "id": "meta_conflict_order",
+   "default": "follows later instruction (one sentence)",
+   "stability": 1.0,
+   "n": 5,
+   "dist": {
+    "follows later instruction (one sentence)": 5
+   },
+   "canonical": "follows later instruction (one sentence)",
+   "avg_out_toks": 32,
+   "avg_sec": 0.65
+  },
+  {
+   "id": "meta_late_constraint",
+   "default": "constraint honored (Japanese)",
+   "stability": 1.0,
+   "n": 5,
+   "dist": {
+    "constraint honored (Japanese)": 5
+   },
+   "canonical": "constraint honored (Japanese)",
+   "avg_out_toks": 40,
+   "avg_sec": 0.8
+  },
+  {
+   "id": "meta_early_constraint",
+   "default": "constraint honored (Japanese)",
+   "stability": 1.0,
+   "n": 5,
+   "dist": {
+    "constraint honored (Japanese)": 5
+   },
+   "canonical": "constraint honored (Japanese)",
+   "avg_out_toks": 38,
+   "avg_sec": 0.77
+  },
+  {
+   "id": "meta_length_limit",
+   "default": "slightly over (<=200 chars)",
+   "stability": 1.0,
+   "n": 5,
+   "dist": {
+    "slightly over (<=200 chars)": 5
+   },
+   "canonical": "slightly over (<=200 chars)",
+   "avg_out_toks": 27,
+   "avg_sec": 0.56
+  },
+  {
+   "id": "meta_forbidden_word",
+   "default": "honors prohibition",
+   "stability": 1.0,
+   "n": 5,
+   "dist": {
+    "honors prohibition": 5
+   },
+   "canonical": "honors prohibition",
+   "avg_out_toks": 60,
+   "avg_sec": 1.19
+  },
+  {
+   "id": "meta_steps_exact",
+   "default": "exactly 4 items (honored)",
+   "stability": 1.0,
+   "n": 5,
+   "dist": {
+    "exactly 4 items (honored)": 5
+   },
+   "canonical": "exactly 4 items (honored)",
+   "avg_out_toks": 80,
+   "avg_sec": 1.56
+  },
+  {
+   "id": "meta_dont_explain",
+   "default": "code only (honored)",
+   "stability": 1.0,
+   "n": 5,
+   "dist": {
+    "code only (honored)": 5
+   },
+   "canonical": "code only (honored)",
+   "avg_out_toks": 18,
+   "avg_sec": 0.39
+  }
+ ]
+}
