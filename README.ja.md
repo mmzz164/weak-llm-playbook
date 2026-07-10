@@ -149,7 +149,21 @@ python3 skill/weak-llm-playbook/scripts/spec_holes.py examples/draft_extract.txt
     ・「top_n([3, 1, 2], 2) は [3, 1] を返す」   # 2/4実装がこちら
 ```
 
-### 3. Claude Code スキル
+### 3. `model_card.py` — 委譲ガイド生成器
+
+溜まったプロファイルから**モデルカード**を生成する: バッテリーごとのサマリ表
+(実装不能/揺れる/安定の数+コスト)、「必ず明示」リスト、意図と照合する安定既定
+チェックリストのMarkdown。手書きしていた「このモデルの要注意既定リスト」が機械的に出る:
+
+```bash
+python3 skill/weak-llm-playbook/scripts/model_card.py --glob 'profiles/profile_Qwen*.json' -o cards/qwen.md
+```
+
+測定済みモデルのカードは [cards/](cards/) に同梱 — 例えば
+[Qwen3.6-27Bのカード](cards/Qwen3.6-27B-NVFP4.md) を見れば、日本語コーディング
+バッテリーは揺れ4点・英語版は0点という言語差が一目で分かる。
+
+### 4. Claude Code スキル
 
 `skill/weak-llm-playbook/` を `~/.claude/skills/` にコピーすると、Claude Codeが
 委譲判断→プロファイル照合→5ブロックスペック作成→独立検証のフローを実行できる。

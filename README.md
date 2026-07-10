@@ -171,7 +171,23 @@ delete the rest, and paste them into your instruction's "pitfalls" section:
     ・"top_n([3, 1, 2], 2) returns [3, 1]"   # 2/4 implementations
 ```
 
-### 3. Claude Code skill
+### 3. `model_card.py` — delegation-guide generator
+
+Turns a model's accumulated profiles into a **model card**: a Markdown delegation guide
+with a per-battery summary table (not-implementable / unstable / stable counts + cost),
+the "always specify" list, and the stable-defaults checklist to compare against your
+intent. What used to be a hand-written "watch out for these defaults" list is now
+generated:
+
+```bash
+python3 skill/weak-llm-playbook/scripts/model_card.py --glob 'profiles/profile_Qwen*.json' -o cards/qwen.md
+```
+
+Generated cards for the measured models ship in [cards/](cards/) — e.g. the
+[Qwen3.6-27B card](cards/Qwen3.6-27B-NVFP4.md) shows at a glance that its Japanese
+coding battery has 4 unstable points while the English one has 0.
+
+### 4. Claude Code skill
 
 Copy `skill/weak-llm-playbook/` into `~/.claude/skills/` and Claude Code will run the
 full flow: delegation decision → profile matching → 5-block spec writing → independent
