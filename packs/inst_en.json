@@ -7,7 +7,11 @@
    "classify": [
     {"label": "violates prohibition (uses set)", "regex": "set\\s*\\("}
    ],
-   "fallback": "honors prohibition"},
+   "fallback": "honors prohibition",
+   "tests": [
+    {"input": "def dedup(l):\n    return list(set(l))", "expect": "violates prohibition (uses set)"},
+    {"input": "def dedup(l):\n    return list(dict.fromkeys(l))", "expect": "honors prohibition"}
+   ]},
 
   {"id": "meta_contract_done", "kind": "text",
    "q": "Calculate 1+1. Output only the single digit 2 and nothing else.",
@@ -15,7 +19,11 @@
     {"label": "contract honored (bare 2)", "regex": "\\A\\s*2\\s*\\Z"},
     {"label": "extra output added", "contains": "2"}
    ],
-   "fallback": "other"},
+   "fallback": "other",
+   "tests": [
+    {"input": " 2 ", "expect": "contract honored (bare 2)"},
+    {"input": "The answer is 2.", "expect": "extra output added"}
+   ]},
 
   {"id": "meta_conflict_order", "kind": "text",
    "q": "Summarize the following text as exactly 3 bullet points.\n\nThe rise of remote work has significantly changed how companies use office space. Many firms have abolished fixed desks in favor of hot-desking. At the same time, surveys show that spontaneous face-to-face conversations have declined, making cross-departmental information sharing harder.\n\nActually, do not use bullet points — summarize it in a single sentence instead.",

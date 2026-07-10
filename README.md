@@ -1,5 +1,7 @@
 # weak-llm-playbook
 
+![tests](https://github.com/mmzz164/weak-llm-playbook/actions/workflows/tests.yml/badge.svg)
+
 **A measurement-driven toolkit (+ Claude Code skill) for delegating coding tasks to weak/cheap LLMs.**
 
 Probe a model's default behaviors, detect spec holes by implementation disagreement, and write the minimum sufficient instruction — by measurement, not gut feeling.
@@ -52,6 +54,11 @@ default the model chose. Two batteries (49 decision points total):
     built-in coding battery, 31 points, via builtin references)
 - Profiles now also record `avg_out_toks` / `avg_sec` per probe — a rough
   delegation-cost axis for comparing models.
+- `--parallel N`: run probes concurrently (measured 3x wall-clock speedup with 6 workers
+  against vLLM; per-probe adaptive resampling unchanged).
+- `--validate`: run a pack's embedded self-tests (`probes[].tests`) offline — no server
+  needed. Every bundled pack ships with self-tests, and `tests/run_all.py` (run by CI)
+  validates them all plus ~170 unit tests for the classifiers and the rule engine.
 
 ```bash
 # OpenAI-compatible endpoint (vLLM / llama.cpp / ollama / OpenAI API)
@@ -152,6 +159,17 @@ Real result (customer-inquiry extraction on Qwen3.6-27B): the `quantity` field's
 was unstable (`"3〜5個"` string vs bare number), and the customer name converged 5/5 on
 the **addressee instead of the sender** — stable, and stably wrong. The consensus list
 exists precisely so you catch that.
+
+When holes are found, the report ends with a **ready-to-paste spec block**: one line per
+candidate behavior with implementation counts — keep the lines that match your intent,
+delete the rest, and paste them into your instruction's "pitfalls" section:
+
+```
+## spec-block suggestions — keep the lines that match your intent
+ ★ hole 1: top_n([3, 1, 2], 2)
+    ・"top_n([3, 1, 2], 2) returns [3, 2]"   # 2/4 implementations
+    ・"top_n([3, 1, 2], 2) returns [3, 1]"   # 2/4 implementations
+```
 
 ### 3. Claude Code skill
 

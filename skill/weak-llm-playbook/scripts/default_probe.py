@@ -68,28 +68,44 @@ ap.add_argument("--probes", default=None, metavar="PACK.json",
                 help="プローブパックJSON(判断点を外部定義)。指定時は --domain より優先")
 ap.add_argument("--assert", dest="assert_base", default=None, metavar="BASELINE.json",
                 help="ベースラインプロファイルと比較し、既定変化/安定性低下/実装不能化があれば exit 1 (CI・モデル更新の回帰検知用)")
+ap.add_argument("--parallel", type=int, default=1, metavar="N",
+                help="プローブを並列実行するワーカー数(既定1=直列。各プローブ内の適応リサンプリングは従来どおり)")
+ap.add_argument("--validate", action="store_true",
+                help="--probes パックの埋め込みセルフテスト(probes[].tests)を実行して終了。ネットワーク不要")
 _argv = sys.argv[1:]
 if _argv and _argv[0].startswith(("http://", "https://")):
     _argv.insert(0, "")   # 先頭がURL = model省略とみなし繰り上げ
 args = ap.parse_args(_argv)
 MODEL, BASE, N = args.model, args.base, args.n
 if not MODEL:
-    if args.api == "anthropic":
+    if args.validate:
+        MODEL = "(validate)"   # セルフテストはネットワーク不要なので自動検出しない
+    elif args.api == "anthropic":
         ap.error("--api anthropic では model を明示してください(自動検出は openai互換の /v1/models のみ)")
-    _models = detect_model(BASE, args.key)
-    MODEL = _models[0]
-    print(f"# model未指定 → {BASE}/v1/models から自動検出: {MODEL}"
-          + (f" (他{len(_models)-1}件: {', '.join(_models[1:4])})" if len(_models) > 1 else ""))
+    else:
+        _models = detect_model(BASE, args.key)
+        MODEL = _models[0]
+        print(f"# model未指定 → {BASE}/v1/models から自動検出: {MODEL}"
+              + (f" (他{len(_models)-1}件: {', '.join(_models[1:4])})" if len(_models) > 1 else ""))
 THINK = args.mode in ("1", "think", "true")
-CLIENT = LLMClient(MODEL, BASE, api=args.api, key=args.key, think=THINK)
+
+# クライアントはスレッドローカル(--parallel 対応)。last_usage 等の状態がスレッド間で混ざらない
+import threading as _th
+_TLS = _th.local()
+def _client():
+    c = getattr(_TLS, "client", None)
+    if c is None:
+        c = LLMClient(MODEL, BASE, api=args.api, key=args.key, think=THINK)
+        _TLS.client = c
+    return c
 
 def gen(prompt, temperature, code=True, suffix=None):
     if code:
         sfx = "\nコードのみ出力。説明・テスト不要。" if suffix is None else suffix
-        return CLIENT.chat(prompt + sfx,
-                           temperature=temperature, max_tokens=2000 if THINK else 400)
+        return _client().chat(prompt + sfx,
+                              temperature=temperature, max_tokens=2000 if THINK else 400)
     # textプローブ: 出力指示はプローブ文自身が持つ。要約・返信が切れないよう上限は広め
-    return CLIENT.chat(prompt, temperature=temperature, max_tokens=2000 if THINK else 600)
+    return _client().chat(prompt, temperature=temperature, max_tokens=2000 if THINK else 600)
 
 def extract_code(text):
     m = re.search(r"```(?:python)?\s*(.*?)```", text, re.S)
@@ -727,22 +743,25 @@ def load_pack(path):
             d["classify"] = _wrap()
             if sfx is not None and d.get("kind") != "text":
                 d["suffix"] = sfx
+            if p.get("tests"):
+                d["tests"] = p["tests"]
             probes.append(d)
             continue
         kind = p.get("kind", "text")
         if kind == "text":
-            probes.append(dict(id=p["id"], q=p["q"], kind="text",
-                               classify=_compile_text(p["classify"], p.get("fallback", "他"))))
+            d = dict(id=p["id"], q=p["q"], kind="text",
+                     classify=_compile_text(p["classify"], p.get("fallback", "他")))
         elif kind == "sql":
-            probes.append(dict(id=p["id"], q=p["q"], kind="text",   # 実行経路はtextと同じ
-                               classify=_compile_sql(p["setup"], p["classify"],
-                                                     p.get("fallback", "他"))))
+            d = dict(id=p["id"], q=p["q"], kind="text",   # 実行経路はtextと同じ
+                     classify=_compile_sql(p["setup"], p["classify"], p.get("fallback", "他")))
         else:
             d = dict(id=p["id"], q=p["q"], names=p.get("names", []),
                      classify=_compile_code(p["cases"], p.get("fallback", "他")))
             if sfx is not None:
                 d["suffix"] = sfx
-            probes.append(d)
+        if p.get("tests"):
+            d["tests"] = p["tests"]
+        probes.append(d)
     name = pk.get("pack") or os.path.splitext(os.path.basename(path))[0]
     return name, probes
 
@@ -761,12 +780,13 @@ def run_probe(p, adaptive=True, max_n=15, band=(0.5, 0.85)):
     import time as _t
     usage = []                              # (出力トークン, 秒) — 委譲単価の目安
     def sample(temp):
-        CLIENT.last_usage = None
+        c = _client()
+        c.last_usage = None
         t0 = _t.time()
         lab = _one(p, temp)
         dt = _t.time() - t0
-        if CLIENT.last_usage and CLIENT.last_usage.get("out") is not None:
-            usage.append((CLIENT.last_usage["out"], dt))
+        if c.last_usage and c.last_usage.get("out") is not None:
+            usage.append((c.last_usage["out"], dt))
         return lab
     labels = [sample(0.0)]                  # 1回目=temp0=正準既定
     labels += [sample(0.7) for _ in range(N - 1)]
@@ -800,13 +820,42 @@ if __name__ == "__main__":
         wanted = set(args.only.split(","))
         PROBES = [p for p in PROBES if p["id"] in wanted]
         print(f"(--only 指定: {len(PROBES)}点に限定)")
-    print(f"# 既定プロファイル: {MODEL} [{tag}] (N={N}, temp0=1回+temp0.7={N-1}回)")
+
+    # --validate: パック埋め込みセルフテストのみ実行(ネットワーク不要)
+    if args.validate:
+        if not args.probes:
+            ap.error("--validate は --probes と併用してください")
+        total = fails = 0
+        for p in PROBES:
+            for t in p.get("tests") or []:
+                total += 1
+                if p.get("kind") == "text":
+                    got = p["classify"](t["input"])
+                else:   # codeプローブ: input はPythonソース文字列
+                    fn, err = load_fn(t["input"], p.get("names", []))
+                    got = err if fn is None else p["classify"](fn)
+                if got != t["expect"]:
+                    fails += 1
+                    print(f"NG {p['id']}: {t['input'][:50]!r} → {got!r} (期待 {t['expect']!r})")
+        print(f"validate: {total - fails}/{total} passed"
+              + ("" if total else " (このパックに tests は未定義)"))
+        sys.exit(1 if fails else 0)
+
+    print(f"# 既定プロファイル: {MODEL} [{tag}] (N={N}, temp0=1回+temp0.7={N-1}回"
+          + (f", 並列{args.parallel}" if args.parallel > 1 else "") + ")")
     print(f"{'probe':<18} {'既定(temp0)':<22} {'安定性':<7} 分布")
     rows = []
-    for p in PROBES:
-        r = run_probe(p)
+    if args.parallel > 1:
+        from concurrent.futures import ThreadPoolExecutor
+        ex = ThreadPoolExecutor(max_workers=args.parallel)
+        results = ex.map(run_probe, PROBES)
+    else:
+        results = map(run_probe, PROBES)
+    for r in results:
         rows.append(r)
         print(f"{r['id']:<18} {r['canonical']:<22} {r['stability']:<5}(n={r['n']:<2}) {r['dist']}")
+    if args.parallel > 1:
+        ex.shutdown()
     # JSON保存(diff用)
     import re as _re
     safe = _re.sub(r"[^A-Za-z0-9_.-]", "_", MODEL)

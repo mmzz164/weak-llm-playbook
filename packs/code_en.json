@@ -31,7 +31,11 @@
   {"builtin": "empty_split", "q": "Write a Python function split_words(text) that splits a text into words by whitespace.",
    "label_map": {"空リスト": "empty list", "空文字1件": "one empty string"}},
   {"builtin": "missing_key", "q": "Write a Python function lookup(d, k) that gets the value for key k from dict d.",
-   "label_map": {"None返す": "returns None", "例外(KeyError)": "raises (KeyError)"}},
+   "label_map": {"None返す": "returns None", "例外(KeyError)": "raises (KeyError)"},
+   "tests": [
+    {"input": "def lookup(d, k):\n    return d[k]", "expect": "raises (KeyError)"},
+    {"input": "def lookup(d, k):\n    return d.get(k)", "expect": "returns None"}
+   ]},
   {"builtin": "flatten", "q": "Write a Python function flatten that flattens a nested list.",
    "label_map": {"深く平坦化": "deep flatten", "1段のみ": "one level only"}},
   {"builtin": "nth_index", "q": "Write a Python function get_nth(lst, n) that returns the n-th element of a list."},

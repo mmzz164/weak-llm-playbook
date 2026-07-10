@@ -1,5 +1,7 @@
 # weak-llm-playbook
 
+![tests](https://github.com/mmzz164/weak-llm-playbook/actions/workflows/tests.yml/badge.svg)
+
 **弱い/安価なLLMへのコーディング委譲を、勘ではなく測定で運用するツールキット+Claude Codeスキル。**
 
 English version: [README.md](README.md)
@@ -39,6 +41,11 @@ English version: [README.md](README.md)
   - **英語版 io/code**: `packs/io_en.json`(16点)/ `packs/code_en.json`(組み込み31点の
     英語版、builtin参照)
 - プロファイルにはプローブごとの `avg_out_toks` / `avg_sec` も記録される(委譲単価の比較軸)。
+- `--parallel N`: プローブの並列実行(vLLM相手にワーカー6で実測3倍。プローブ内の
+  適応リサンプリングは従来どおり)。
+- `--validate`: パック埋め込みセルフテスト(`probes[].tests`)をオフライン実行(サーバー不要)。
+  同梱パックは全てセルフテスト付きで、CIが `tests/run_all.py`(分類器・ルールエンジンの
+  単体テスト約170項目+全パック検証)を回す。
 
 ```bash
 # OpenAI互換エンドポイント (vLLM / llama.cpp / ollama / OpenAI API)
@@ -131,6 +138,16 @@ python3 skill/weak-llm-playbook/scripts/spec_holes.py examples/draft_extract.txt
 (文字列 `"3〜5個"` vs 素の数値)で発散を検出。さらに顧客名は5/5全実行が
 **差出人ではなく宛名**に収束 — 安定して、安定したまま間違う。[合意]リストは
 まさにこれを捕まえるためにある。
+
+穴が見つかったときは、レポート末尾に**貼るだけの急所ブロック案**が出る。候補挙動ごとに
+1行(実装数つき)——意図に合う行だけ残して削り、指示の「急所」節にそのまま貼ればよい:
+
+```
+## 急所ブロック案 — 意図に合う行だけ残して、指示の「急所」節に貼る
+ ★ 穴1: top_n([3, 1, 2], 2)
+    ・「top_n([3, 1, 2], 2) は [3, 2] を返す」   # 2/4実装がこちら
+    ・「top_n([3, 1, 2], 2) は [3, 1] を返す」   # 2/4実装がこちら
+```
 
 ### 3. Claude Code スキル
 

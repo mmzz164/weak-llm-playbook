@@ -7,7 +7,11 @@
    "classify": [
     {"label": "禁止を破る(set使用)", "regex": "set\\s*\\("}
    ],
-   "fallback": "禁止を守る"},
+   "fallback": "禁止を守る",
+   "tests": [
+    {"input": "def dedup(l):\n    return list(set(l))", "expect": "禁止を破る(set使用)"},
+    {"input": "def dedup(l):\n    return list(dict.fromkeys(l))", "expect": "禁止を守る"}
+   ]},
 
   {"id": "meta_contract_done", "kind": "text",
    "q": "1+1 を計算してください。出力は 2 という数字1文字だけ。他には何も書かないこと。",
@@ -15,7 +19,11 @@
     {"label": "契約遵守(2のみ)", "regex": "\\A\\s*2\\s*\\Z"},
     {"label": "余計な出力あり", "contains": "2"}
    ],
-   "fallback": "他"},
+   "fallback": "他",
+   "tests": [
+    {"input": " 2 ", "expect": "契約遵守(2のみ)"},
+    {"input": "答えは 2 です。", "expect": "余計な出力あり"}
+   ]},
 
   {"id": "meta_conflict_order", "kind": "text",
    "q": "次の文章を箇条書き3点で要約してください。\n\nリモートワークの普及により、企業のオフィス利用は大きく変化した。多くの企業が固定席を廃止し、フリーアドレス制を導入している。一方で、対面での偶発的な会話が減り、部門を越えた情報共有が難しくなったという調査結果もある。\n\nやっぱり箇条書きは使わず、1文だけで要約してください。",

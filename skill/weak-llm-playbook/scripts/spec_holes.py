@@ -124,6 +124,14 @@ if args.kind == "json":
     for i, label, key, v in consensus:
         print(f"  - 入力#{i} {key} → {v}")
 
+    if diverged:
+        print("\n## 急所ブロック案 — 意図に合う行だけ残して、そのまま指示に貼る")
+        for i, label, key, c in diverged:
+            print(f"  ★ 入力#{i}「{label}…」の {key}:")
+            for v, n in c.most_common():
+                print(f"     ・「{key} は {v} とする(例: この入力では {v})」   # {n}/{sum(c.values())}回がこちら")
+        print("  ※ [合意]の値が意図と違う場合も、同じ形式で1行足すこと")
+
     print(f"\nまとめ: 穴 {len(diverged)}件 / 合意 {len(consensus)}件 / パース失敗 {bad}/{total}")
     sys.exit(0)
 
@@ -240,5 +248,14 @@ for args, c in diverged:
 print("\n## [合意] 暗黙の一致挙動 — 意図と合うか照合せよ(合わなければ明示)")
 for args, b in consensus:
     print(f"  - {FN_NAME}(*{args!r}) → {b}")
+
+if diverged:
+    print("\n## 急所ブロック案 — 意図に合う行だけ残して、指示の「急所」節に貼る")
+    for i, (args_, c) in enumerate(diverged, 1):
+        call = f"{FN_NAME}({', '.join(repr(a) for a in args_)})"
+        print(f"  ★ 穴{i}: {call}")
+        for b, n in c.most_common():
+            print(f"     ・「{call} は {b} を返す」   # {n}/{len(alive)}実装がこちら")
+    print("  ※ [合意]の挙動が意図と違う場合も、同じ形式で1行足すこと")
 
 print(f"\nまとめ: 穴 {len(diverged)}件 / 合意 {len(consensus)}件 / 実装不能率 {broken}/{K}")

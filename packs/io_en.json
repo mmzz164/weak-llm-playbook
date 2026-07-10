@@ -10,7 +10,12 @@
     {"label": "as written (March 5, 2026)", "json_field": "date", "value_regex": "March"},
     {"label": "other", "json_field": "date"}
    ],
-   "fallback": "ERR:no-json"},
+   "fallback": "ERR:no-json",
+   "tests": [
+    {"input": "{\"date\": \"2026-03-05\"}", "expect": "ISO(zero-padded)"},
+    {"input": "```json\n{\"date\": \"March 5, 2026\"}\n```", "expect": "as written (March 5, 2026)"},
+    {"input": "no json here", "expect": "ERR:no-json"}
+   ]},
 
   {"id": "io_missing_field", "kind": "text",
    "q": "Using ONLY the information below, output a JSON object {\"name\": ..., \"age\": ..., \"email\": ...} and nothing else.\nInformation: name = John Smith",

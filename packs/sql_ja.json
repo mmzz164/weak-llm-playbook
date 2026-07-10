@@ -13,7 +13,12 @@
     {"label": "NULLを末尾へ(明示処理)", "col0": ["c", "a", "b"]},
     {"label": "NULL行を除外", "col0": ["c", "a"]}
    ],
-   "fallback": "他"},
+   "fallback": "他",
+   "tests": [
+    {"input": "SELECT name FROM items ORDER BY price", "expect": "NULLが先頭(sqlite既定)"},
+    {"input": "SELECT name FROM items ORDER BY price NULLS LAST", "expect": "NULLを末尾へ(明示処理)"},
+    {"input": "SELECT TOP 3 name FROM items", "expect": "ERR:sql(OperationalError)"}
+   ]},
 
   {"id": "sql_top_ties", "kind": "sql",
    "q": "scoresテーブル(name TEXT, score INTEGER)から得点上位2件の名前を返すSQLite用SQLを書いてください。SQLのみ出力。",

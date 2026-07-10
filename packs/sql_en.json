@@ -13,7 +13,11 @@
     {"label": "NULLs last (explicit handling)", "col0": ["c", "a", "b"]},
     {"label": "NULL rows excluded", "col0": ["c", "a"]}
    ],
-   "fallback": "other"},
+   "fallback": "other",
+   "tests": [
+    {"input": "SELECT name FROM items ORDER BY price", "expect": "NULLs first (sqlite default)"},
+    {"input": "SELECT name FROM items WHERE price IS NOT NULL ORDER BY price", "expect": "NULL rows excluded"}
+   ]},
 
   {"id": "sql_top_ties", "kind": "sql",
    "q": "Table scores(name TEXT, score INTEGER). Write a SQLite query that returns the names of the top 2 scores. Output SQL only.",
