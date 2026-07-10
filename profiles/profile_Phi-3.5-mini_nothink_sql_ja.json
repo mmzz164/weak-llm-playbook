@@ -1,0 +1,95 @@
+{
+ "model": "Phi-3.5-mini",
+ "mode": "nothink",
+ "N": 5,
+ "base": "http://localhost:8002",
+ "api": "openai",
+ "domain": "sql_ja",
+ "rows": [
+  {
+   "id": "sql_null_sort",
+   "default": "NULLが先頭(sqlite既定)",
+   "stability": 1.0,
+   "n": 5,
+   "dist": {
+    "NULLが先頭(sqlite既定)": 5
+   },
+   "canonical": "NULLが先頭(sqlite既定)",
+   "avg_out_toks": 10,
+   "avg_sec": 0.27
+  },
+  {
+   "id": "sql_top_ties",
+   "default": "LIMITで切る(同点の一方を落とす)",
+   "stability": 1.0,
+   "n": 5,
+   "dist": {
+    "LIMITで切る(同点の一方を落とす)": 5
+   },
+   "canonical": "LIMITで切る(同点の一方を落とす)",
+   "avg_out_toks": 101,
+   "avg_sec": 2.42
+  },
+  {
+   "id": "sql_case_where",
+   "default": "大文字小文字を区別(0件)",
+   "stability": 1.0,
+   "n": 5,
+   "dist": {
+    "大文字小文字を区別(0件)": 5
+   },
+   "canonical": "大文字小文字を区別(0件)",
+   "avg_out_toks": 18,
+   "avg_sec": 0.43
+  },
+  {
+   "id": "sql_join_missing",
+   "default": "INNER(部署なし従業員を落とす)",
+   "stability": 1.0,
+   "n": 5,
+   "dist": {
+    "INNER(部署なし従業員を落とす)": 5
+   },
+   "canonical": "INNER(部署なし従業員を落とす)",
+   "avg_out_toks": 32,
+   "avg_sec": 0.76
+  },
+  {
+   "id": "sql_empty_agg",
+   "default": "ERR:sql(OperationalError)",
+   "stability": 1.0,
+   "n": 5,
+   "dist": {
+    "ERR:sql(OperationalError)": 5
+   },
+   "canonical": "ERR:sql(OperationalError)",
+   "avg_out_toks": 123,
+   "avg_sec": 2.85
+  },
+  {
+   "id": "sql_dup_output",
+   "default": "重複そのまま",
+   "stability": 1.0,
+   "n": 5,
+   "dist": {
+    "重複そのまま": 5
+   },
+   "canonical": "重複そのまま",
+   "avg_out_toks": 10,
+   "avg_sec": 0.25
+  },
+  {
+   "id": "sql_order_unspec",
+   "default": "ERR:sql(OperationalError)",
+   "stability": 0.86,
+   "n": 7,
+   "dist": {
+    "ERR:sql(OperationalError)": 6,
+    "昇順": 1
+   },
+   "canonical": "ERR:sql(OperationalError)",
+   "avg_out_toks": 136,
+   "avg_sec": 3.19
+  }
+ ]
+}

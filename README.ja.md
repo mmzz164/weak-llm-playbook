@@ -28,8 +28,14 @@ English version: [README.md](README.md)
   対話メタ(情報不足時に逆質問するか進めるか)— 出力テキストを決定論分類
 - `--domain all`: 両方
 - `--probes pack.json`: **独自バッテリーをJSONで宣言的に定義**(本体のコード変更不要)。
-  ルールは regex/contains/長さ・JSONパース/フィールド照合・実行コードの結果/例外ケースに対応。
-  `packs/io_en.json`(ioバッテリーの英語版)がリファレンス実例を兼ねる。
+  ルールは regex/contains/長さ・JSONパース/フィールド照合・実行Pythonの結果/例外ケース、
+  さらに `kind: "sql"` で生成SQLをsqlite(:memory:)実行して結果行で分類。同梱パック:
+  - `packs/io_en.json` — 英語版ioバッテリー(16点)
+  - `packs/inst_ja.json` — **指示遵守メタ**(9点): 出力契約・禁止事項・矛盾指示・制約の位置・
+    数量/字数制限が「そのモデルで効くか」(=5ブロックテンプレの出力契約が機能する前提の検証)
+  - `packs/sql_ja.json` — **SQLドメイン**(7点): NULLソート順・同点上位・大小文字照合・
+    JOINの欠損行・空集合の集約・重複出力・並び順の既定
+- プロファイルにはプローブごとの `avg_out_toks` / `avg_sec` も記録される(委譲単価の比較軸)。
 
 ```bash
 # OpenAI互換エンドポイント (vLLM / llama.cpp / ollama / OpenAI API)

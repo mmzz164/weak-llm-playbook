@@ -1,0 +1,120 @@
+{
+ "model": "Phi-3.5-mini",
+ "mode": "nothink",
+ "N": 5,
+ "base": "http://localhost:8002",
+ "api": "openai",
+ "domain": "inst_ja",
+ "rows": [
+  {
+   "id": "meta_negation",
+   "default": "禁止を守る",
+   "stability": 0.6,
+   "n": 15,
+   "dist": {
+    "禁止を守る": 9,
+    "禁止を破る(set使用)": 6
+   },
+   "canonical": "禁止を守る",
+   "avg_out_toks": 268,
+   "avg_sec": 6.31
+  },
+  {
+   "id": "meta_contract_done",
+   "default": "契約遵守(2のみ)",
+   "stability": 1.0,
+   "n": 5,
+   "dist": {
+    "契約遵守(2のみ)": 5
+   },
+   "canonical": "契約遵守(2のみ)",
+   "avg_out_toks": 3,
+   "avg_sec": 0.1
+  },
+  {
+   "id": "meta_conflict_order",
+   "default": "後の指示に従う(1文)",
+   "stability": 1.0,
+   "n": 5,
+   "dist": {
+    "後の指示に従う(1文)": 5
+   },
+   "canonical": "後の指示に従う(1文)",
+   "avg_out_toks": 80,
+   "avg_sec": 1.98
+  },
+  {
+   "id": "meta_late_constraint",
+   "default": "制約無視(日本語で応答)",
+   "stability": 1.0,
+   "n": 5,
+   "dist": {
+    "制約無視(日本語で応答)": 5
+   },
+   "canonical": "制約無視(日本語で応答)",
+   "avg_out_toks": 88,
+   "avg_sec": 2.02
+  },
+  {
+   "id": "meta_early_constraint",
+   "default": "制約無視(日本語で応答)",
+   "stability": 1.0,
+   "n": 5,
+   "dist": {
+    "制約無視(日本語で応答)": 5
+   },
+   "canonical": "制約無視(日本語で応答)",
+   "avg_out_toks": 88,
+   "avg_sec": 2.08
+  },
+  {
+   "id": "meta_length_limit",
+   "default": "軽微超過(〜99字)",
+   "stability": 0.86,
+   "n": 7,
+   "dist": {
+    "軽微超過(〜99字)": 6,
+    "制限遵守(〜55字)": 1
+   },
+   "canonical": "軽微超過(〜99字)",
+   "avg_out_toks": 89,
+   "avg_sec": 2.09
+  },
+  {
+   "id": "meta_forbidden_word",
+   "default": "禁止を守る",
+   "stability": 1.0,
+   "n": 5,
+   "dist": {
+    "禁止を守る": 5
+   },
+   "canonical": "禁止を守る",
+   "avg_out_toks": 200,
+   "avg_sec": 4.68
+  },
+  {
+   "id": "meta_steps_exact",
+   "default": "ちょうど4項目(遵守)",
+   "stability": 1.0,
+   "n": 5,
+   "dist": {
+    "ちょうど4項目(遵守)": 5
+   },
+   "canonical": "ちょうど4項目(遵守)",
+   "avg_out_toks": 121,
+   "avg_sec": 2.83
+  },
+  {
+   "id": "meta_dont_explain",
+   "default": "コードのみ(遵守)",
+   "stability": 1.0,
+   "n": 5,
+   "dist": {
+    "コードのみ(遵守)": 5
+   },
+   "canonical": "コードのみ(遵守)",
+   "avg_out_toks": 19,
+   "avg_sec": 0.46
+  }
+ ]
+}

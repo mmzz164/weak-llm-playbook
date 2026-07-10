@@ -37,8 +37,17 @@ default the model chose. Two batteries (50 decision points total):
 - `--domain all`: both
 - `--probes pack.json`: **your own battery**, defined declaratively in JSON — no code
   changes needed. Rules cover regex/contains/length checks, JSON parsing and field
-  matchers, and result/exception cases for executed code. `packs/io_en.json` (the English
-  port of the io battery) doubles as the reference example.
+  matchers, result/exception cases for executed Python, and (`kind: "sql"`) executing
+  generated SQL against an in-memory sqlite DB. Bundled packs:
+  - `packs/io_en.json` — English port of the io battery (16 points)
+  - `packs/inst_ja.json` — **instruction-following meta** (9 points): do output contracts,
+    prohibitions, conflicting instructions, constraint position, and count/length limits
+    actually bind on this model? (i.e., does the 5-block template's "output contract" work)
+  - `packs/sql_ja.json` — **SQL domain** (7 points): NULL sort order, top-N ties,
+    case-sensitive matching, JOIN dropping unmatched rows, empty-set aggregates,
+    duplicate output, default sort direction
+- Profiles now also record `avg_out_toks` / `avg_sec` per probe — a rough
+  delegation-cost axis for comparing models.
 
 ```bash
 # OpenAI-compatible endpoint (vLLM / llama.cpp / ollama / OpenAI API)

@@ -70,6 +70,7 @@ class LLMClient:
         self.api = api
         self.key = _resolve_key(key)
         self.think = think
+        self.last_usage = None  # 直近chat()の {"in": prompt_tokens, "out": completion_tokens}
         self._no_ctk = False    # openai: chat_template_kwargs 非対応を記憶
         self._no_temp = False   # anthropic: temperature 非対応を記憶
 
@@ -86,6 +87,11 @@ class LLMClient:
         return self._openai(prompt, temperature, max_tokens)
 
     # --- OpenAI chat completions 形式 ---
+    def _finish_openai(self, r):
+        u = r.get("usage") or {}
+        self.last_usage = {"in": u.get("prompt_tokens"), "out": u.get("completion_tokens")}
+        return r["choices"][0]["message"].get("content") or ""
+
     def _openai(self, prompt, temperature, max_tokens):
         headers = {"Authorization": f"Bearer {self.key}"} if self.key else {}
         body = {"model": self.model,
@@ -96,11 +102,11 @@ class LLMClient:
                 r = self._post("/v1/chat/completions",
                                {**body, "chat_template_kwargs": {"enable_thinking": self.think}},
                                headers)
-                return r["choices"][0]["message"].get("content") or ""
+                return self._finish_openai(r)
             except Exception:
                 self._no_ctk = True   # 非対応サーバー: 以後は素のリクエスト
         r = self._post("/v1/chat/completions", body, headers)
-        return r["choices"][0]["message"].get("content") or ""
+        return self._finish_openai(r)
 
     # --- Anthropic Messages 形式 ---
     def _anthropic(self, prompt, temperature, max_tokens):
@@ -123,5 +129,7 @@ class LLMClient:
                 r = self._post("/v1/messages", body, headers)
             else:
                 raise RuntimeError(f"HTTP {e.code}: {msg}") from e
+        u = r.get("usage") or {}
+        self.last_usage = {"in": u.get("input_tokens"), "out": u.get("output_tokens")}
         return "".join(b.get("text", "") for b in r.get("content", [])
                        if b.get("type") == "text")

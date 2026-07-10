@@ -668,13 +668,51 @@ def _compile_code(cases, fallback):
         return fallback
     return classify
 
+def _extract_sql(text):
+    t = text.strip()
+    m = re.search(r"```(?:sql)?\s*(.*?)```", t, re.S)
+    if m:
+        t = m.group(1).strip()
+    m = re.search(r"(?is)\b(select|with)\b.*?(;|\Z)", t)
+    return m.group(0).rstrip(";").strip() if m else None
+
+def _compile_sql(setup, rules, fallback):
+    """kind="sql": 生成SQLをsqlite(:memory:)で実行し、結果行を宣言的ルールで分類。
+    rule = {"label", "rows": [[..]] 完全一致 / "col0": [..] 第1列一致 / "row_count": n}
+    SQL不抽出→ERR:no-sql / 実行エラー(方言前提含む)→ERR:sql(型名)"""
+    def classify(text):
+        sql = _extract_sql(text)
+        if not sql:
+            return "ERR:no-sql"
+        import sqlite3
+        db = sqlite3.connect(":memory:")
+        for s in setup:
+            db.execute(s)
+        try:
+            rows = [list(r) for r in db.execute(sql).fetchall()]
+        except Exception as e:
+            return f"ERR:sql({type(e).__name__})"
+        finally:
+            db.close()
+        for r in rules:
+            if "rows" in r and _norm(rows) == _norm(r["rows"]): return r["label"]
+            if "col0" in r and [w[0] for w in rows if w] == r["col0"]: return r["label"]
+            if "row_count" in r and len(rows) == r["row_count"]: return r["label"]
+        return fallback
+    return classify
+
 def load_pack(path):
     pk = json.load(open(path))
     probes = []
     for p in pk["probes"]:
-        if p.get("kind", "text") == "text":
+        kind = p.get("kind", "text")
+        if kind == "text":
             probes.append(dict(id=p["id"], q=p["q"], kind="text",
                                classify=_compile_text(p["classify"], p.get("fallback", "他"))))
+        elif kind == "sql":
+            probes.append(dict(id=p["id"], q=p["q"], kind="text",   # 実行経路はtextと同じ
+                               classify=_compile_sql(p["setup"], p["classify"],
+                                                     p.get("fallback", "他"))))
         else:
             probes.append(dict(id=p["id"], q=p["q"], names=p.get("names", []),
                                classify=_compile_code(p["cases"], p.get("fallback", "他"))))
@@ -693,18 +731,32 @@ def _one(p, temp):
 
 def run_probe(p, adaptive=True, max_n=15, band=(0.5, 0.85)):
     from collections import Counter
-    labels = [_one(p, 0.0)]                 # 1回目=temp0=正準既定
-    labels += [_one(p, 0.7) for _ in range(N - 1)]
+    import time as _t
+    usage = []                              # (出力トークン, 秒) — 委譲単価の目安
+    def sample(temp):
+        CLIENT.last_usage = None
+        t0 = _t.time()
+        lab = _one(p, temp)
+        dt = _t.time() - t0
+        if CLIENT.last_usage and CLIENT.last_usage.get("out") is not None:
+            usage.append((CLIENT.last_usage["out"], dt))
+        return lab
+    labels = [sample(0.0)]                  # 1回目=temp0=正準既定
+    labels += [sample(0.7) for _ in range(N - 1)]
     def stab():
         c = Counter(labels); return c.most_common(1)[0][1] / len(labels), c
     s, c = stab()
     # 適応的リサンプリング: 安定性が曖昧帯なら追加サンプルで精密化
     while adaptive and band[0] <= s < band[1] and len(labels) < max_n:
-        labels.append(_one(p, 0.7))
+        labels.append(sample(0.7))
         s, c = stab()
     top = c.most_common(1)[0][0]
-    return dict(id=p["id"], default=top, stability=round(s, 2), n=len(labels),
-                dist=dict(c), canonical=labels[0])
+    row = dict(id=p["id"], default=top, stability=round(s, 2), n=len(labels),
+               dist=dict(c), canonical=labels[0])
+    if usage:
+        row["avg_out_toks"] = round(sum(u for u, _ in usage) / len(usage))
+        row["avg_sec"] = round(sum(d for _, d in usage) / len(usage), 2)
+    return row
 
 if __name__ == "__main__":
     tag = "thinking" if THINK else "nothink"
@@ -738,6 +790,11 @@ if __name__ == "__main__":
                "domain": pack_name, "rows": rows},
               open(outp, "w"), ensure_ascii=False, indent=1)
     print(f"\n[保存] {outp}")
+    priced = [r for r in rows if "avg_out_toks" in r]
+    if priced:
+        tot = sum(r["avg_out_toks"] * r["n"] for r in priced)
+        avg_s = sum(r["avg_sec"] for r in priced) / len(priced)
+        print(f"(概算: 出力 計{tot}tok / 平均 {avg_s:.1f}s/サンプル — 委譲単価の目安としてJSONにも保存)")
     def _is_err(label):
         return (any(label.startswith(x) for x in ("EXEC_ERR", "RUN_ERR", "NO_FUNC", "LOAD_ERR", "ERR"))
                 or label.startswith("JSON不成立") or label == "JSONなし" or label == "出力なし")

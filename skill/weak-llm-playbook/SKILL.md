@@ -64,8 +64,14 @@ description: >-
 - モデル比較: プロファイルは JSON 保存される。
   `python3 scripts/default_probe.py --diff A.json B.json [C.json ...]` で「モデルを替えたら
   書き換える点」が出る(3個以上で行列比較)。
-- `--probes pack.json`: 判断点を外部JSONで宣言的に定義(本体変更不要でドメイン・言語追加。
-  packs/io_en.json=英語版ioバッテリーが実例)。エラー系ラベルは "ERR" 始まりにする。
+- `--probes pack.json`: 判断点を外部JSONで宣言的に定義(本体変更不要でドメイン・言語追加)。
+  エラー系ラベルは "ERR" 始まりにする。同梱パック:
+  - packs/io_en.json = 英語版ioバッテリー(16点)
+  - packs/inst_ja.json = **指示遵守メタ**(9点): 出力契約・禁止事項・矛盾指示の優先・制約の
+    位置感度・数量/字数制限が「そのモデルで効くか」= 5ブロックテンプレの前提検証
+  - packs/sql_ja.json = **SQLドメイン**(7点, kind="sql"): 生成SQLをsqlite(:memory:)で実行し
+    結果行で分類。NULLソート順・同点上位・大小文字照合・JOIN欠損・空集合集約・重複・並び順
+- プロファイル行に avg_out_toks / avg_sec(委譲単価の目安)も保存される。
 - `--assert baseline.json`: ドリフト検知。既定変化・安定性低下・実装不能化があれば exit 1。
   モデルの重み/量子化/サービング更新のたびに一発回す回帰テストとして使う(cron可)。
 - **プロファイルは委譲で使う言語で測る**(実測: 同じQwenでも日付既定はJAプロンプト=ISO安定0.86 /
