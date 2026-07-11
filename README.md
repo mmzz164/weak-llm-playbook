@@ -44,15 +44,16 @@ instructions from one page instead of digging through JSON.
 
 Also in the repo: `packs/` (the decision-point batteries as plain JSON — add your own
 domain or language without touching code), `profiles/` and `cards/` (raw measurements
-and generated guides for the models measured so far), and `skill/` — four Claude Code
+and generated guides for the models measured so far), and `skill/` — five Claude Code
 skills: `/weak-llm-fix` (hand it a draft prompt, get back the normalized one),
 `/weak-llm-run` (normalize, execute on the weak LLM, verify, return the result),
 `/weak-llm-selffix` (the weak-operator variant: the weak LLM runs the fix loop on
 *itself* — every step is graded by gate scripts, never by the model, and all pinned
-lines come back for human review; add `run` to also execute the fixed prompt and
-verify the result by replaying the measured behaviors; free-form tasks like
-"review this page" get a shadow JSON contract behind the scenes, so users never
-write JSON), and `weak-llm-playbook` (the decision-layer reference they build on).
+lines come back for human review; free-form tasks like "review this page" get a
+shadow JSON contract behind the scenes, so users never write JSON),
+`/weak-llm-selfrun` (same, then executes the fixed prompt and returns an artifact
+verified by replaying the measured behaviors), and `weak-llm-playbook`
+(the decision-layer reference they build on).
 
 ## Quickstart
 
