@@ -34,16 +34,26 @@ python3 demo/demo.py
 ```bash
 export PROBE_BASE=http://localhost:8000       # ollamaなら http://localhost:11434
 
-# 中核ツール — ドラフト指示の穴を見つけ、再現性を検証済みの修正版プロンプトを得る:
-python3 tools/spec_holes.py draft.txt inputs.json --fix
+# 中核ツール — ドラフト指示の穴を見つけ、再現性を検証済みの修正版プロンプトを得る。
+# 渡すものは2つ:
+#   draft.txt   = あなたが普通に書いた指示文
+#   inputs.json = 実行結果を突き合わせるためのプローブ入力を数個——コードタスクなら
+#                 引数の組(例: [[[3,1,2],2],[[],3]])、抽出タスクなら対象文書(文字列の配列)
+# すぐ試せるペアを examples/ に同梱。この行はそのまま動く:
+python3 tools/spec_holes.py examples/draft_topn.txt examples/probe_inputs_topn.json --fix
+
+# プローブ入力を自分で書きたくない? コードタスクなら selffix.py が生成する
+# (機械検査つき):
+python3 tools/selffix.py draft.txt --run
 
 # モデルごとに1回 — 既定の癖を測定し、委譲ガイド1枚に集約:
 python3 tools/default_probe.py $PROBE_BASE 5
 python3 tools/model_card.py --glob 'profiles/*.json' -o card.md
 
-# 全部入り1コマンド(振り分け・「このページをレビューして」等の自由文タスクへの
-# 影のJSON契約・ゲート・検証済み実行):
-python3 tools/selffix.py draft.txt [inputs.json] [--run]
+# 自由文タスク(「このページをレビューして」・分類・要約)もそのまま通る——
+# selffix.py が裏で影のJSON契約を当てるので、あなたはJSONを書かない。
+# 対象文書を入力として渡すだけ:
+python3 tools/selffix.py review_draft.txt pages.json --run
 
 # ツールを使うタスク(MCPでトラッカー検索など)は使い捨てエージェントセッションで
 # 実行 — エージェントCLI(`claude` かローカルラッパー)が必要:

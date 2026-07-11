@@ -41,16 +41,26 @@ Anthropic API.
 export PROBE_BASE=http://localhost:8000       # ollama: http://localhost:11434
 
 # THE core tool — find the holes in your draft instruction and get back a
-# fixed prompt, verified to behave reproducibly:
-python3 tools/spec_holes.py draft.txt inputs.json --fix
+# fixed prompt, verified to behave reproducibly. It needs two things:
+#   draft.txt   = your instruction, as you'd naturally write it
+#   inputs.json = a few probe inputs to compare the runs on — argument tuples
+#                 for a code task, e.g. [[[3,1,2],2],[[],3]], or the target
+#                 documents (an array of strings) for an extraction task
+# A ready-made pair ships in examples/ — this line runs as-is:
+python3 tools/spec_holes.py examples/draft_topn.txt examples/probe_inputs_topn.json --fix
+
+# Don't want to write probe inputs? selffix.py generates them for code tasks
+# (and gates them mechanically):
+python3 tools/selffix.py draft.txt --run
 
 # Once per model — measure its defaults, render a delegation cheat sheet:
 python3 tools/default_probe.py $PROBE_BASE 5
 python3 tools/model_card.py --glob 'profiles/*.json' -o card.md
 
-# Everything in one command (routing, shadow JSON contracts for free-form
-# tasks like "review this page", gates, verified execution):
-python3 tools/selffix.py draft.txt [inputs.json] [--run]
+# Free-form tasks ("review this page", classify, summarize) work too —
+# selffix.py applies a shadow JSON contract behind the scenes, so you never
+# write JSON; pass the target documents as the inputs:
+python3 tools/selffix.py review_draft.txt pages.json --run
 
 # Tool-using tasks (e.g. search a tracker through MCP) run as disposable
 # agent sessions — needs an agent CLI (`claude`, or a local wrapper):
