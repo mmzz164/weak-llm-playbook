@@ -44,8 +44,10 @@ instructions from one page instead of digging through JSON.
 
 Also in the repo: `packs/` (the decision-point batteries as plain JSON — add your own
 domain or language without touching code), `profiles/` and `cards/` (raw measurements
-and generated guides for the models measured so far), and `skill/` (a Claude Code skill
-that runs the whole flow).
+and generated guides for the models measured so far), and `skill/` — three Claude Code
+skills: `/weak-llm-fix` (hand it a draft prompt, get back the normalized one),
+`/weak-llm-run` (normalize, execute on the weak LLM, verify, return the result), and
+`weak-llm-playbook` (the decision-layer reference both build on).
 
 ## Quickstart
 
