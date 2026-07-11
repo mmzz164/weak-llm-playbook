@@ -91,6 +91,35 @@ to check against your intent, plus the failure rate.
   your intent — pinning the majority doesn't guess your intent, it makes behavior
   *reproducible* so your review is over concrete lines instead of imagined ambiguities.
 
+## check_inputs.py / check_fixed.py — mechanical gates for the fix loop
+
+Both scripts grade an operator's work products by exit code (0 = PASS, 1 = FAIL,
+2 = malformed file), so the fix loop can be driven by a weak operator — including
+the weak LLM itself (`skill/weak-llm-selffix`) — without ever trusting its
+self-assessment.
+
+```
+check_inputs.py inputs.json [--kind auto|code|json] [--min N]
+```
+
+Grades probe inputs without understanding the task: structure, count (code: >=5,
+json: >=4), duplicates, and per-argument-position pattern coverage — empty /
+size-1 / ties for sized arguments, zero / negative for numeric arguments (only
+for positions where those types actually appear). Every missing pattern is
+reported with a copy-pasteable suggested input; adding the suggestions verbatim
+converges to PASS. In json (extraction) mode only the structural checks are
+machine-checkable; the recipe reminder it prints is covered by spec_holes'
+divergence report instead.
+
+```
+check_fixed.py draft.txt fixed.txt
+```
+
+Handoff gate for `--fix` output: the fixed prompt must still contain the draft
+verbatim as a prefix (fixes may only APPEND pinned lines), and anything appended
+must be a recognized pin block. Catches a weak operator paraphrasing,
+"improving", or truncating the draft.
+
 ## model_card.py — delegation-guide generator
 
 ```

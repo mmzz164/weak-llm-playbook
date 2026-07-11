@@ -28,6 +28,8 @@ description: >-
 4. **プローブ入力の自作(このスキルの核心)**: ドラフトを読み、解釈が割れそうな点
    (境界値・空・欠損・範囲・重複・同点・型)を狙った入力を5〜8個、自分で書いて
    inputs.json に保存する。コードタスク=引数の組の配列 / 抽出タスク=入力文書(文字列)の配列。
+   書いたら `python3 <scripts>/check_inputs.py inputs.json` で機械検査し、
+   FAILなら提案された入力をそのまま追加してPASSにする。
 5. **正常化の実行**:
    `python3 <scripts>/spec_holes.py draft.txt inputs.json --fix`
    (モード・関数名・モデルは自動判別される)。exit 1(穴が残った)なら、残存穴を
