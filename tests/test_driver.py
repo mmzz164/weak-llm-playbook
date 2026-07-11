@@ -74,4 +74,17 @@ chk("set:id catches membership diff", any(k == "results" for k, _ in div), True)
 div, cons = ra.compare_results([ten, ten], POL_SET)
 chk("set:id agrees on same lineup", div, [])
 
+# ---- run_agent --fix: 発散→ピン行への翻訳
+DIV = [("count", Counter({"3": 2, "5": 1})),
+       ("results", Counter({'set{"A"}': 2, 'set{"B"}': 1})),
+       ("items", Counter({"len=10": 2, "len=5": 1}))]
+auto, manual = ra.pin_lines(DIV, ja=True)
+chk("scalar pinned with majority", auto[0], '- "count" = 3 とする   # 他候補: 5 (1)')
+chk("len pinned as item count", '"items" は 10件とする' in auto[1], True)
+chk("set becomes FILL-IN", len(manual), 1)
+chk("FILL-IN mentions ordering", "並び順" in manual[0], True)
+auto_en, manual_en = ra.pin_lines(DIV, ja=False)
+chk("en scalar pin", auto_en[0], '- "count" = 3   # alternatives: 5 (1)')
+chk("en FILL-IN", "FILL IN" in manual_en[0], True)
+
 finish("test_driver")
