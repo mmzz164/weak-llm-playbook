@@ -182,7 +182,7 @@ are not its to execute.
 ## run_agent.py — K-run prober for tool-requiring tasks
 
 ```
-run_agent.py task.txt [--cmd "claude-local"] [--allowed mcp__server__*]
+run_agent.py task.txt [--cmd "claude-local"] [--allowed mcp__server__*] [--bypass]
              [-k 3] [--timeout 900] [--policy POLICY.json] [--contract research|none]
 ```
 
@@ -199,6 +199,11 @@ every diverging behavior pinned (scalars and counts pinned to the majority;
 data-dependent lineups become explicit FILL-IN lines for you, since concrete
 IDs cannot be pinned in a reusable task), then re-probes the revised task
 (K more runs) and reports holes before → after.
+
+`--bypass` passes `--dangerously-skip-permissions` to the children instead of an
+allowlist — convenient, but the child can then use every tool (Bash, file
+writes, all MCP) while processing external content that may contain injected
+instructions. Prefer `--allowed` when the task reads untrusted material.
 
 ## model_card.py — delegation-guide generator
 

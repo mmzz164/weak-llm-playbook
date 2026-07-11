@@ -85,6 +85,8 @@ def probe(task, args, outdir):
     results = []
     for i in range(args.k):
         cmd = base_cmd + ["-p", task]
+        if args.bypass:
+            cmd.append("--dangerously-skip-permissions")
         for pat in args.allowed:
             cmd += ["--allowedTools", pat]
         t0 = time.time()
@@ -128,6 +130,12 @@ def main():
     ap.add_argument("--cmd", default="claude-local", help="agent command (may include args)")
     ap.add_argument("--allowed", action="append", default=[],
                     help="tool allowlist pattern (repeatable), e.g. mcp__mcp-atlassian__*")
+    ap.add_argument("--bypass", action="store_true",
+                    help="pass --dangerously-skip-permissions to child sessions instead of "
+                         "an allowlist. Convenient, but the child can then use EVERY tool "
+                         "(Bash, file writes, all MCP) — and it processes external content "
+                         "that may contain injected instructions. Prefer --allowed when the "
+                         "task reads untrusted material.")
     ap.add_argument("-k", type=int, default=3, help="number of runs (default 3 — agent runs are expensive)")
     ap.add_argument("--timeout", type=int, default=900, help="seconds per run (default 900)")
     ap.add_argument("--policy", default=None, help="compare-policy JSON (default: research contract's)")
