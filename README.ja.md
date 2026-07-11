@@ -52,8 +52,10 @@ out.txt を眺めて、意図と違うピン行だけ書き直せばよい——
 python3 skill/weak-llm-playbook/scripts/default_probe.py http://localhost:8000 5
 
 # 2. 委譲前にドラフト仕様の穴を検出 — 修正・検証済みのプロンプトが返ってくる
-python3 skill/weak-llm-playbook/scripts/spec_holes.py examples/draft_topn.txt top_n \
-        http://localhost:8000 5 examples/probe_inputs_topn.json --fix fixed_prompt.txt
+#    (draft以降は順不同・省略可。関数名・モデル・モードは自動判別。
+#     PROBE_BASE を設定しておけばURLも不要)
+python3 skill/weak-llm-playbook/scripts/spec_holes.py examples/draft_topn.txt \
+        examples/probe_inputs_topn.json http://localhost:8000 --fix
 
 # 3. 溜まったプロファイルから委譲ガイドを生成
 python3 skill/weak-llm-playbook/scripts/model_card.py --glob 'profiles/*.json' -o card.md

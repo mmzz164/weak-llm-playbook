@@ -8,14 +8,15 @@
 それを同じ手順で再測定して「穴が消えたか」まで検証する(消え残りがあれば exit 1)。
 使う側は OUT.txt を読み、意図と違う固定行だけ書き直せばよい。
 
-使い方:
-  python3 spec_holes.py <task.txt> <関数名|-> [model] [base_url] [K] [inputs.json]
-                        [--kind code|json] [--fix OUT.txt] [--api ...] [--key ...]
-    task.txt    : ワーカーに渡す予定のドラフト仕様(自然文)
-    inputs.json : --kind code なら引数の組の配列(例 [[[3,1,2],2],[[],0]])。
-                  --kind json なら入力テキスト(文字列)の配列。
-  例) spec_holes.py draft.txt top_n http://localhost:8000 5 inputs.json --fix fixed.txt
-  model省略時(openai互換のみ): /v1/models から自動検出。
+使い方(draft.txt 以降の位置引数は順不同・すべて省略可):
+  python3 spec_holes.py <draft.txt> [inputs.json] [URL] [K] [関数名] [モデル名]
+                        [--kind auto|code|json] [--fix [OUT.txt]] [--api ...] [--key ...]
+  最小形(接続先を環境変数にしておけば):
+    export PROBE_BASE=http://localhost:8003
+    python3 spec_holes.py draft.txt inputs.json --fix
+  - inputs.json の中身でモードを自動判別: 文字列の配列→抽出(json)/ 引数の組の配列→コード
+  - 関数名は省略可(生成コードから自動発見)。モデル名も省略可(/v1/models から自動検出)
+  - --fix の出力先は省略時 <draft>.fixed.txt
 """
 import argparse
 import json
@@ -54,13 +55,54 @@ def load_fn(code, name):
         exec(code, mod.__dict__)
     except Exception as e:
         return None, f"LOAD_ERR:{type(e).__name__}"
-    f = getattr(mod, name, None)
-    if callable(f):
-        return f, None
+    if name and name != "-":
+        f = getattr(mod, name, None)
+        if callable(f):
+            return f, None
     for k, v in mod.__dict__.items():
         if callable(v) and not k.startswith("_") and isinstance(v, types.FunctionType):
             return v, None
     return None, "NO_FUNC"
+
+
+def classify_positionals(rest):
+    """順不同の位置引数を型で判別する: URL→base / *.json→inputs / 整数→K /
+    残りの単語は 1つ目→関数名, 2つ目→モデル名("-" や "" はプレースホルダとして無視)。"""
+    out = {"base": None, "inputs": None, "k": None, "words": []}
+    for a in rest:
+        if a.startswith(("http://", "https://")):
+            out["base"] = a
+        elif a.endswith(".json"):
+            out["inputs"] = a
+        elif a.isdigit():
+            out["k"] = int(a)
+        elif a in ("-", ""):
+            out["words"].append(None)
+        else:
+            out["words"].append(a)
+    out["words"] += [None, None]
+    return out
+
+
+def default_fix_path(task_file):
+    root, ext = os.path.splitext(task_file)
+    return f"{root}.fixed{ext or '.txt'}"
+
+
+def detect_kind(inputs_file):
+    """inputs.json の中身で code/json モードを自動判別(文字列の配列→json、配列の配列→code)。"""
+    try:
+        data = json.load(open(inputs_file))
+    except Exception as e:
+        print(f"!! failed to read {inputs_file}: {e}"); sys.exit(2)
+    if isinstance(data, list) and data:
+        if all(isinstance(x, str) for x in data):
+            return "json"
+        if all(isinstance(x, list) for x in data):
+            return "code"
+    print(f"!! cannot infer --kind from {inputs_file}: use an array of strings (json mode) "
+          "or an array of argument tuples (code mode), or pass --kind explicitly")
+    sys.exit(2)
 
 
 # ==== 抽出モード (--kind json) ====
@@ -183,8 +225,10 @@ def probe_code(task, fn_name, inputs, K):
         if f is None:
             broken += 1
             continue
+        if not fn_name or fn_name == "-":
+            fn_name = f.__name__   # 関数名未指定: 最初の有効実装から自動発見
         impls.append(f)
-    res = dict(n=len(impls), K=K, attempts=attempts, broken=broken,
+    res = dict(fn=fn_name or "f", n=len(impls), K=K, attempts=attempts, broken=broken,
                dead=0, alive=0, diverged=[], consensus=[], fatal=None)
     if len(impls) < 3:
         res["fatal"] = "fewer than 3 valid implementations"
@@ -281,45 +325,54 @@ def pin_block_json(diverged, ja):
 
 def main():
     global CLIENT
-    ap = argparse.ArgumentParser(description="task-driven spec-hole detection (works against any endpoint)")
-    ap.add_argument("task_file")
-    ap.add_argument("fn_name")
-    ap.add_argument("model", nargs="?", default=None,
-                    help="omit (or \"\") to auto-detect from /v1/models (OpenAI-compatible only)")
-    ap.add_argument("base",  nargs="?", default="http://localhost:8000")
-    ap.add_argument("k",     nargs="?", type=int, default=5)
-    ap.add_argument("inputs", nargs="?", default=None, help="JSON file of user-supplied probe inputs (recommended)")
+    ap = argparse.ArgumentParser(
+        description="task-driven spec-hole detection and prompt fixing (works against any endpoint)",
+        epilog="Positional args after the draft are order-free: a URL is the endpoint, "
+               "*.json is the probe-inputs file, an integer is K, the first bare word is the "
+               "function name and the second a model name.")
+    ap.add_argument("task_file", help="your draft instruction (plain text)")
+    ap.add_argument("rest", nargs="*", help="order-free: URL / inputs.json / K / [fn] [model]")
+    ap.add_argument("--fn", default=None, help="function name (code mode; default: auto-detect from the generated code)")
+    ap.add_argument("--model", default=None, help="model name (default: auto-detect from /v1/models)")
+    ap.add_argument("--base", default=None, help="endpoint base URL (default: $PROBE_BASE or http://localhost:8000)")
+    ap.add_argument("-k", type=int, default=None, help="runs per probe (default 5)")
+    ap.add_argument("--inputs", default=None, help="probe-inputs JSON (also accepted as a positional *.json)")
+    ap.add_argument("--kind", choices=["auto", "code", "json"], default="auto",
+                    help="auto (default): inferred from inputs.json — array of strings = json mode "
+                         "(extraction), array of argument tuples = code mode")
+    ap.add_argument("--fix", nargs="?", const="", metavar="OUT.txt", default=None,
+                    help="write a revised prompt with diverging behaviors pinned to the majority, then "
+                         "re-probe it to verify (exit 1 if holes remain). Default output: <draft>.fixed.txt")
     ap.add_argument("--api", choices=["openai", "anthropic"], default="openai")
     ap.add_argument("--key", default=None)
-    ap.add_argument("--kind", choices=["code", "json"], default="code",
-                    help="code=function implementation (default) / json=extraction tasks: run the instruction "
-                         "K times per input text and detect field-level divergence (pass '-' as fn_name)")
-    ap.add_argument("--fix", metavar="OUT.txt", default=None,
-                    help="write a revised prompt with diverging behaviors pinned to the majority, "
-                         "then re-probe it to verify the holes are gone (exit 1 if any remain)")
-    _argv = sys.argv[1:]
-    if len(_argv) > 2 and _argv[2].startswith(("http://", "https://")):
-        _argv.insert(2, "")   # 第3引数がURL = model省略とみなし繰り上げ
-    args = ap.parse_args(_argv)
+    args = ap.parse_args()
 
-    model = args.model
+    pos = classify_positionals(args.rest)
+    fn = args.fn or pos["words"][0]
+    model = args.model or pos["words"][1]
+    base = args.base or pos["base"] or os.environ.get("PROBE_BASE", "http://localhost:8000")
+    K = args.k if args.k is not None else (pos["k"] or 5)
+    inputs_file = args.inputs or pos["inputs"]
+    kind = args.kind
+    if kind == "auto":
+        kind = detect_kind(inputs_file) if inputs_file else "code"
+
     if not model:
         if args.api == "anthropic":
             ap.error("--api anthropic requires an explicit model (auto-detection uses the OpenAI-compatible /v1/models only)")
-        models = detect_model(args.base, args.key)
+        models = detect_model(base, args.key)
         model = models[0]
-        print(f"# model not specified → auto-detected from {args.base}/v1/models: {model}"
+        print(f"# model not specified → auto-detected from {base}/v1/models: {model}"
               + (f" (+{len(models)-1} more)" if len(models) > 1 else ""))
 
     task = open(args.task_file).read().strip()
-    CLIENT = LLMClient(model, args.base, api=args.api, key=args.key, think=False)
-    K = args.k
+    CLIENT = LLMClient(model, base, api=args.api, key=args.key, think=False)
     ja = has_ja(task)
 
-    if args.kind == "json":
-        if not args.inputs:
-            print("!! --kind json requires inputs.json (an array of input text strings)"); sys.exit(2)
-        texts = json.load(open(args.inputs))
+    if kind == "json":
+        if not inputs_file:
+            print("!! json mode requires inputs.json (an array of input text strings)"); sys.exit(2)
+        texts = json.load(open(inputs_file))
         if not (isinstance(texts, list) and texts and all(isinstance(x, str) for x in texts)):
             print("!! inputs.json must be an array of strings (input texts)"); sys.exit(2)
         print(f"# spec-hole detection (extraction mode): model={model} K={K} inputs={len(texts)}")
@@ -327,40 +380,43 @@ def main():
         report_json(res)
         probe_again = lambda t: probe_json(t, texts, K)
         block = lambda d: pin_block_json(d, ja)
+        fn_label = None
     else:
-        print(f"# spec-hole detection: fn={args.fn_name} model={model} K={K}")
-        inputs = collect_inputs(task, args.fn_name, args.inputs)
-        res = probe_code(task, args.fn_name, inputs, K)
-        report_code(res, args.fn_name)
-        probe_again = lambda t: probe_code(t, args.fn_name, inputs, K)
-        block = lambda d: pin_block_code(d, res["alive"], args.fn_name, ja)
+        print(f"# spec-hole detection: fn={fn or '(auto)'} model={model} K={K}")
+        inputs = collect_inputs(task, fn, inputs_file)
+        res = probe_code(task, fn, inputs, K)
+        fn_label = res["fn"]
+        report_code(res, fn_label)
+        probe_again = lambda t: probe_code(t, fn_label, inputs, K)
+        block = lambda d: pin_block_code(d, res["alive"], fn_label, ja)
 
-    if not args.fix:
+    if args.fix is None:
         return
+    fix_out = args.fix or default_fix_path(args.task_file)
 
     # --- --fix: 改訂版プロンプトの生成と再検証 ---
     if not res["diverged"]:
-        open(args.fix, "w").write(task + "\n")
-        print(f"\n[fix] no holes found — draft is already unambiguous; wrote it unchanged to {args.fix}")
+        open(fix_out, "w").write(task + "\n")
+        print(f"\n[fix] no holes found — draft is already unambiguous; wrote it unchanged to {fix_out}")
         return
     fixed = task + "\n\n" + block(res["diverged"]) + "\n"
-    open(args.fix, "w").write(fixed)
-    print(f"\n[fix] wrote revised prompt to {args.fix} ({len(res['diverged'])} behavior(s) pinned)")
+    open(fix_out, "w").write(fixed)
+    print(f"\n[fix] wrote revised prompt to {fix_out} ({len(res['diverged'])} behavior(s) pinned)")
     print("[fix] re-probing the revised prompt to verify...")
     res2 = probe_again(fixed)
     before, after = len(res["diverged"]), len(res2["diverged"])
     print(f"[fix] holes: {before} → {after}")
     if after == 0:
-        print(f"[fix] verified: behavior is now reproducible. Review {args.fix} and rewrite any pinned line that does not match your intent.")
+        print(f"[fix] verified: behavior is now reproducible. Review {fix_out} and rewrite any pinned line that does not match your intent.")
     else:
         print("[fix] remaining holes:")
-        if args.kind == "json":
+        if kind == "json":
             for i, label, key, c in res2["diverged"]:
                 print(f"  ★ input #{i} \"{label}…\" {key} → " + " / ".join(f"\"{v}\" x{n}" for v, n in c.most_common()))
         else:
             for a, c in res2["diverged"]:
-                print(f"  ★ {args.fn_name}(*{a!r}) → " + " / ".join(f"\"{b}\" x{n}" for b, n in c.most_common()))
-        print(f"[fix] pin these manually in {args.fix} (or rerun --fix on it), then re-verify.")
+                print(f"  ★ {fn_label}(*{a!r}) → " + " / ".join(f"\"{b}\" x{n}" for b, n in c.most_common()))
+        print(f"[fix] pin these manually in {fix_out} (or rerun --fix on it), then re-verify.")
         sys.exit(1)
 
 

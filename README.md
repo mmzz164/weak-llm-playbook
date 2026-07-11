@@ -57,8 +57,10 @@ endpoint (vLLM / llama.cpp / ollama / OpenAI API) or the Anthropic API.
 python3 skill/weak-llm-playbook/scripts/default_probe.py http://localhost:8000 5
 
 # 2. Find the holes in your draft spec — and get a fixed, verified prompt back
-python3 skill/weak-llm-playbook/scripts/spec_holes.py examples/draft_topn.txt top_n \
-        http://localhost:8000 5 examples/probe_inputs_topn.json --fix fixed_prompt.txt
+#    (everything after the draft is optional and order-free; function name, model,
+#     and mode are auto-detected. Set PROBE_BASE once to drop the URL too.)
+python3 skill/weak-llm-playbook/scripts/spec_holes.py examples/draft_topn.txt \
+        examples/probe_inputs_topn.json http://localhost:8000 --fix
 
 # 3. Turn accumulated profiles into a delegation guide
 python3 skill/weak-llm-playbook/scripts/model_card.py --glob 'profiles/*.json' -o card.md

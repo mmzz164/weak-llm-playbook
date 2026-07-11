@@ -55,7 +55,8 @@ from llm_client import LLMClient, detect_model, find_json
 ap = argparse.ArgumentParser(description="default-behavior probe (works against any endpoint)")
 ap.add_argument("model", nargs="?", default=None,
                 help="omit (or \"\") to auto-detect from /v1/models (OpenAI-compatible only)")
-ap.add_argument("base",  nargs="?", default="http://localhost:8000")
+ap.add_argument("base",  nargs="?", default=os.environ.get("PROBE_BASE", "http://localhost:8000"),
+                help="endpoint base URL (default: $PROBE_BASE or http://localhost:8000)")
 ap.add_argument("n",     nargs="?", type=int, default=5)
 ap.add_argument("mode",  nargs="?", default="nothink", help="'think' enables thinking mode")
 ap.add_argument("--api", choices=["openai", "anthropic"], default="openai",

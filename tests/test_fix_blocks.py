@@ -20,6 +20,17 @@ chk("code_en_head", b2.startswith("[Behavior contract"), True)
 chk("code_en_alt", "# alternatives: [3, 1] (2/5)" in b2, True)
 chk("code_en_exc", "- top_n([1], 0) raises ValueError" in b2, True)
 
+# 順不同の位置引数判別と自動出力名
+p = sh.classify_positionals(["top_n", "http://localhost:8003", "5", "inputs.json"])
+chk("sniff_full", (p["base"], p["inputs"], p["k"], p["words"][0]),
+    ("http://localhost:8003", "inputs.json", 5, "top_n"))
+p2 = sh.classify_positionals(["inputs.json"])
+chk("sniff_min", (p2["inputs"], p2["words"][0]), ("inputs.json", None))
+p3 = sh.classify_positionals(["-", "http://x", "docs.json"])
+chk("sniff_dash", (p3["words"][0], p3["base"]), (None, "http://x"))
+chk("fixpath", sh.default_fix_path("draft.txt"), "draft.fixed.txt")
+chk("fixpath_noext", sh.default_fix_path("specs/draft"), "specs/draft.fixed.txt")
+
 jd = [(0, "山田様 3月5日に", "quantity", Counter({'"3〜5個"': 4, '"3〜5"': 1}))]
 jb = sh.pin_block_json(jd, ja=True)
 chk("json_ja_head", jb.startswith("[出力の固定"), True)

@@ -50,30 +50,42 @@ The report buckets every probe into: **not implementable** (majority errored —
 delegation), **unstable** (stability < 0.8 — always specify), and **stable defaults**
 (specify only where the default mismatches your intent).
 
-## spec_holes.py — task-driven spec-hole detection
+## spec_holes.py — task-driven spec-hole detection and prompt fixing
 
 ```
-spec_holes.py <draft.txt> <fn_name|-> [model] [base_url] [K] [inputs.json]
-              [--kind code|json] [--api ...] [--key ...]
+spec_holes.py <draft.txt> [inputs.json] [URL] [K] [fn] [model]   # order-free after the draft
+              [--kind auto|code|json] [--fix [OUT.txt]] [--api ...] [--key ...]
+
+# minimal form (set the endpoint once):
+export PROBE_BASE=http://localhost:8003
+spec_holes.py draft.txt inputs.json --fix
 ```
 
 Disagreement probing: your draft spec is implemented/executed K times and behaviors are
 compared on the same inputs. **Where runs disagree = spec you forgot to write.**
 
-- `--kind code` (default): the worker implements `<fn_name>` K times; all implementations
-  run on your probe inputs (`inputs.json` = array of argument tuples). The
-  not-implementable rate doubles as a delegation-viability check.
-- `--kind json`: for extraction/reformatting tasks. The same instruction runs K times per
-  input document (`inputs.json` = array of strings); JSON outputs are diffed **field by
-  field**, and the parse-failure rate replaces the not-implementable rate.
+Positional args after the draft are recognized by shape, in any order: a URL is the
+endpoint, `*.json` is the probe-inputs file, an integer is K, the first bare word is the
+function name and the second a model name. Everything is optional: the endpoint falls
+back to `$PROBE_BASE`, the model is auto-detected from `/v1/models`, the function name is
+auto-discovered from the generated code, and the mode is inferred from `inputs.json` —
+an array of **strings** means extraction (json) mode, an array of **argument tuples**
+means code mode.
+
+- code mode: the worker implements the function K times; all implementations run on your
+  probe inputs. The not-implementable rate doubles as a delegation-viability check.
+- json mode: for extraction/reformatting tasks. The same instruction runs K times per
+  input document; JSON outputs are diffed **field by field**, and the parse-failure rate
+  replaces the not-implementable rate.
 
 Report signals: **[DIVERGED]** = holes you must specify, **[AGREED]** = implicit consensus
 to check against your intent, plus the failure rate.
 
-- `--fix OUT.txt` — closes the loop: writes a revised prompt (your draft plus a
+- `--fix [OUT.txt]` — closes the loop: writes a revised prompt (your draft plus a
   "behavior contract" block pinning every diverging behavior to the majority choice,
   alternatives kept as comments), then **re-probes the revised prompt** to verify the
   ambiguity is gone. Exit 0 if no holes remain, 1 otherwise (remaining holes are listed).
+  The output path defaults to `<draft>.fixed.txt`.
   The block's language (Japanese/English) follows the draft's language, as do the
   generation instructions. Review OUT.txt and rewrite any pinned line that does not match
   your intent — pinning the majority doesn't guess your intent, it makes behavior

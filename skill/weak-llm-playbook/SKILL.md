@@ -104,9 +104,9 @@ description: >-
 挙動が割れた入力=仕様の穴を機械検出する(disagreement probing)。
 曖昧さを発注側が想像する必要がなく、「割れた」という事実が穴の証拠になる。
 
-- 使い方: `python3 scripts/spec_holes.py <draft.txt> <関数名> <model> <base_url> 5 <inputs.json> [--api ...] [--key ...]`
-  model は省略可(OpenAI互換のみ): 第3引数がURLなら `/v1/models` から自動検出。
-  inputs.json(プローブ入力)は**発注側が用意する**(境界を突く引数の組の配列)。
+- 使い方: `python3 scripts/spec_holes.py <draft.txt> <inputs.json> [URL] [--fix]`
+  (draft以降は順不同・省略可: 接続先=$PROBE_BASE、モデル・関数名・モードは自動判別)。
+  inputs.json(プローブ入力)は**発注側が用意する**(コード=引数の組の配列 / 抽出=文書の配列)。
   ワーカー提案の合併もあるが、弱いモデルは壊れたJSONを返すので発注側供給が確実。
 - 出力の読み方(3シグナル):
   1. **[DIVERGED]**(発散) 実装間で挙動が割れた入力 → 仕様の穴。どちらが意図か決めて急所ブロックに固定
