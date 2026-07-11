@@ -5,8 +5,10 @@ description: >-
   正常化するアクションスキル。/weak-llm-fix の弱操作者版: 判断ステップを全廃し、プローブ入力は
   固定レシピ+check_inputs.pyの機械採点、ピン留め・再検証は spec_holes --fix、意図レビューは
   行わず全ピン行を人間への要確認リストとして返す。操作者は一度も自己採点しない(採点は全て
-  スクリプトのexit codeが行う)。"/weak-llm-selffix <ドラフト or ファイルパス>" で起動。
-  強い操作者が使うなら [[weak-llm-fix]]、実行までやるなら [[weak-llm-run]]。
+  スクリプトのexit codeが行う)。2モード: "/weak-llm-selffix <ドラフト>" は正常化済み
+  プロンプトを返し、"/weak-llm-selffix <ドラフト> run" はそのまま実行して、fix時に記録した
+  答え合わせ表(expected.json)との機械照合(replay_check.py)まで通った成果物を返す。
+  強い操作者が使うなら [[weak-llm-fix]] / [[weak-llm-run]]。
 ---
 
 # weak-llm-selffix — normalize a draft prompt with zero judgment calls
@@ -19,8 +21,11 @@ in the current directory or /tmp.
 
 ## Steps
 
-1. **Save the draft.** If the argument is a file path, use that file as
-   `draft.txt`. Otherwise write the argument text to `draft.txt` unchanged.
+1. **Save the draft and pick the mode.** If the arguments end with the bare
+   word `run`, remove it and remember: RUN MODE (execute after fixing).
+   Otherwise: FIX MODE (return the fixed prompt only). Then, if the remaining
+   argument is a file path, use that file as `draft.txt`; otherwise write the
+   argument text to `draft.txt` unchanged.
 
 2. **Scope gate.** The draft must ask for exactly one of:
    (a) implementing a function / a piece of code, or
@@ -69,7 +74,7 @@ in the current directory or /tmp.
    It must print PASS. If it prints FAIL you modified the draft text —
    go back to step 6 and regenerate; do not edit `<final>` by hand.
 
-8. **Report — output exactly this block and nothing else:**
+8. **FIX MODE ends here — report. Output exactly this block and nothing else:**
 
    ```
    FIXED PROMPT: <path of final file>
@@ -80,6 +85,23 @@ in the current directory or /tmp.
    PROFILES: <output of: ls <scripts>/profile_*.json 2>/dev/null | grep -i "<model>" — or "none">
    NOT DONE: intent review, model-quirk injection. A human or a stronger model
    must review every pinned line before use.
+   ```
+
+## Run mode (only when the user asked for `run`)
+
+9. **Execute + replay gate.** spec_holes --fix has written the expected-behavior
+   table next to `<final>` (same name, `.expected.json` instead of `.txt`). Run:
+   `python3 <scripts>/replay_check.py <final-root>.expected.json --prompt <final>`
+   - PASS → it prints the artifact path (`.impl.py` for code, `.outputs.json`
+     for extraction). That artifact is the verified result.
+   - FAIL (it retries 3 times internally — do NOT rerun it in a loop) → reply
+     `EXECUTION FAILED VERIFICATION`, paste its mismatch lines, and stop.
+
+10. **Report — the FIX MODE block from step 8, plus these two lines:**
+
+   ```
+   ARTIFACT: <path printed by replay_check>
+   REPLAY: <paste replay_check's PASS line>
    ```
 
 ## Hard rules

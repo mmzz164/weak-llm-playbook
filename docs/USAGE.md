@@ -90,6 +90,8 @@ to check against your intent, plus the failure rate.
   generation instructions. Review OUT.txt and rewrite any pinned line that does not match
   your intent — pinning the majority doesn't guess your intent, it makes behavior
   *reproducible* so your review is over concrete lines instead of imagined ambiguities.
+  On a clean verify it also writes the expected-behavior table
+  `<fixed>.expected.json`, used by `replay_check.py` (below) to verify an execution.
 
 ## check_inputs.py / check_fixed.py — mechanical gates for the fix loop
 
@@ -119,6 +121,22 @@ Handoff gate for `--fix` output: the fixed prompt must still contain the draft
 verbatim as a prefix (fixes may only APPEND pinned lines), and anything appended
 must be a recognized pin block. Catches a weak operator paraphrasing,
 "improving", or truncating the draft.
+
+## replay_check.py — execution verifier (run mode)
+
+```
+replay_check.py <fixed>.expected.json --prompt fixed.txt [URL] [--attempts N]
+replay_check.py <fixed>.expected.json --code impl.py
+```
+
+When `--fix` verifies clean, spec_holes also writes `<fixed>.expected.json` —
+the agreed behavior for every probe input. replay_check executes the fixed
+prompt once more (up to `--attempts` generations, default 3) and mechanically
+compares the result against that table: a verified execution is one that
+reproduces every measured behavior. On PASS it saves the artifact next to the
+prompt (`.impl.py` for code, `.outputs.json` for extraction). `--code` instead
+verifies an existing implementation offline. Executes generated code — same
+caveat as the probes.
 
 ## model_card.py — delegation-guide generator
 

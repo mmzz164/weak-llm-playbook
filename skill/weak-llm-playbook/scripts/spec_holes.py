@@ -323,6 +323,28 @@ def pin_block_json(diverged, ja):
     return "\n".join(lines)
 
 
+def expected_path(fix_out):
+    return os.path.splitext(fix_out)[0] + ".expected.json"
+
+
+def build_expected(kind, fn_label, consensus, texts=None):
+    """検証済みプロンプトの「答え合わせ表」: 全プローブ入力の合意挙動。
+    replay_check.py が実行結果をこの表と機械照合する(runモードの最終ゲート)。"""
+    if kind == "json":
+        return {"kind": "json",
+                "expected": [{"input": i, "doc": texts[i], "field": key, "value": v}
+                             for i, label, key, v in consensus]}
+    return {"kind": "code", "fn": fn_label,
+            "expected": [{"args": a, "behavior": b} for a, b in consensus]}
+
+
+def write_expected(fix_out, table):
+    path = expected_path(fix_out)
+    json.dump(table, open(path, "w"), ensure_ascii=False, indent=1)
+    print(f"[fix] wrote expected-behavior table to {path} "
+          "(verify an execution with: replay_check.py)")
+
+
 def main():
     global CLIENT
     ap = argparse.ArgumentParser(
@@ -369,6 +391,7 @@ def main():
     CLIENT = LLMClient(model, base, api=args.api, key=args.key, think=False)
     ja = has_ja(task)
 
+    texts = None
     if kind == "json":
         if not inputs_file:
             print("!! json mode requires inputs.json (an array of input text strings)"); sys.exit(2)
@@ -398,6 +421,7 @@ def main():
     if not res["diverged"]:
         open(fix_out, "w").write(task + "\n")
         print(f"\n[fix] no holes found — draft is already unambiguous; wrote it unchanged to {fix_out}")
+        write_expected(fix_out, build_expected(kind, fn_label, res["consensus"], texts))
         return
     fixed = task + "\n\n" + block(res["diverged"]) + "\n"
     open(fix_out, "w").write(fixed)
@@ -408,6 +432,7 @@ def main():
     print(f"[fix] holes: {before} → {after}")
     if after == 0:
         print(f"[fix] verified: behavior is now reproducible. Review {fix_out} and rewrite any pinned line that does not match your intent.")
+        write_expected(fix_out, build_expected(kind, fn_label, res2["consensus"], texts))
     else:
         print("[fix] remaining holes:")
         if kind == "json":
