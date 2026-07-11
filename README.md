@@ -28,11 +28,14 @@ your instruction**), stable but possibly not what you meant (**check it** — Qw
 "3–5 items" as the invented midpoint 4, every single time), or safe to leave out.
 Bonus: diff two models, or fail CI when an upgrade changes a habit (`--assert`).
 
-**`spec_holes.py` — find the holes in your instruction.** *(run before an important task)*
-Gives your draft instruction to the model 5 times and compares the 5 results on the same
+**`spec_holes.py` — find and fix the holes in your instruction.** *(run before an important task)*
+Gives your draft instruction to the model 5 times and compares the results on the same
 inputs. Wherever they disagree, the model had to guess — that's a spec you forgot to
-write. The report ends with ready-to-paste lines ("`top_n([3,1,2], 2) returns [3, 2]`" /
-"`... returns [3, 1]`"); keep the one you meant and the hole is closed.
+write. With `--fix out.txt` it closes the loop: it **writes a revised prompt** with every
+diverging behavior pinned (majority choice, alternatives kept as comments), then re-probes
+the revised prompt to **verify the ambiguity is gone**. You review one file and rewrite
+only the pinned lines that don't match your intent — editing concrete lines is far easier
+than imagining ambiguities.
 
 **`model_card.py` — turn the measurements into a one-page guide.** *(when profiles pile up)*
 Profiles are JSON; this merges a model's profiles into a Markdown cheat sheet — what not
@@ -53,9 +56,9 @@ endpoint (vLLM / llama.cpp / ollama / OpenAI API) or the Anthropic API.
 # 1. Profile a model's defaults (model name auto-detected from the endpoint)
 python3 skill/weak-llm-playbook/scripts/default_probe.py http://localhost:8000 5
 
-# 2. Find the holes in your draft spec before you delegate
+# 2. Find the holes in your draft spec — and get a fixed, verified prompt back
 python3 skill/weak-llm-playbook/scripts/spec_holes.py examples/draft_topn.txt top_n \
-        http://localhost:8000 5 examples/probe_inputs_topn.json
+        http://localhost:8000 5 examples/probe_inputs_topn.json --fix fixed_prompt.txt
 
 # 3. Turn accumulated profiles into a delegation guide
 python3 skill/weak-llm-playbook/scripts/model_card.py --glob 'profiles/*.json' -o card.md

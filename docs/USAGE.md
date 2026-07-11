@@ -68,9 +68,16 @@ compared on the same inputs. **Where runs disagree = spec you forgot to write.**
   field**, and the parse-failure rate replaces the not-implementable rate.
 
 Report signals: **[DIVERGED]** = holes you must specify, **[AGREED]** = implicit consensus
-to check against your intent, plus the failure rate. When holes exist the report ends
-with **ready-to-paste spec-block suggestions** — one line per candidate behavior with
-implementation counts; keep the lines matching your intent.
+to check against your intent, plus the failure rate.
+
+- `--fix OUT.txt` — closes the loop: writes a revised prompt (your draft plus a
+  "behavior contract" block pinning every diverging behavior to the majority choice,
+  alternatives kept as comments), then **re-probes the revised prompt** to verify the
+  ambiguity is gone. Exit 0 if no holes remain, 1 otherwise (remaining holes are listed).
+  The block's language (Japanese/English) follows the draft's language, as do the
+  generation instructions. Review OUT.txt and rewrite any pinned line that does not match
+  your intent — pinning the majority doesn't guess your intent, it makes behavior
+  *reproducible* so your review is over concrete lines instead of imagined ambiguities.
 
 ## model_card.py — delegation-guide generator
 

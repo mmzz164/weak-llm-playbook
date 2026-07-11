@@ -26,11 +26,13 @@ English version: [README.md](README.md)
 書かなくて安全。おまけ: 2モデルの癖の差分、モデル更新で癖が変わったらCIを落とす
 (`--assert`)。
 
-**`spec_holes.py` — あなたの指示書の「穴」を見つける**(重要タスクを投げる前に)
-ドラフト指示を同じモデルに5回やらせ、5つの成果物を同じ入力で比べます。結果が
-割れた所=モデルが推測で埋めるしかなかった所=**あなたの書き忘れ**。レポート末尾に
-貼るだけの候補行(「`top_n([3,1,2], 2) returns [3, 2]`」/「`... returns [3, 1]`」)が
-出るので、意図に合う行を残せば穴が塞がります。
+**`spec_holes.py` — 指示書の「穴」を見つけて、直す**(重要タスクを投げる前に)
+ドラフト指示を同じモデルに5回やらせ、成果物を同じ入力で比べます。結果が割れた所=
+モデルが推測で埋めるしかなかった所=**あなたの書き忘れ**。`--fix out.txt` を付けると
+最後まで面倒を見ます: 割れた挙動を多数派でピン留めした**改訂版プロンプトを書き出し**、
+それを再測定して**曖昧さが消えたことまで検証**(他候補はコメントで併記)。あなたは
+out.txt を眺めて、意図と違うピン行だけ書き直せばよい——曖昧さを想像するより、
+具体的な行を直すほうがずっと簡単、というのが狙いです。
 
 **`model_card.py` — 測定結果を1枚のガイドにまとめる**(プロファイルが溜まったら)
 プロファイルはJSONの山なので、モデルごとのMarkdown 1枚 — 任せてはいけないもの・
@@ -49,9 +51,9 @@ English version: [README.md](README.md)
 # 1. モデルの既定をプロファイル(モデル名はエンドポイントから自動検出)
 python3 skill/weak-llm-playbook/scripts/default_probe.py http://localhost:8000 5
 
-# 2. 委譲前にドラフト仕様の穴を検出
+# 2. 委譲前にドラフト仕様の穴を検出 — 修正・検証済みのプロンプトが返ってくる
 python3 skill/weak-llm-playbook/scripts/spec_holes.py examples/draft_topn.txt top_n \
-        http://localhost:8000 5 examples/probe_inputs_topn.json
+        http://localhost:8000 5 examples/probe_inputs_topn.json --fix fixed_prompt.txt
 
 # 3. 溜まったプロファイルから委譲ガイドを生成
 python3 skill/weak-llm-playbook/scripts/model_card.py --glob 'profiles/*.json' -o card.md
