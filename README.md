@@ -57,22 +57,34 @@ verified by replaying the measured behaviors), and `weak-llm-playbook`
 
 ## Quickstart
 
-Zero dependencies (Python standard library only). Works with any OpenAI-compatible
-endpoint (vLLM / llama.cpp / ollama / OpenAI API) or the Anthropic API.
+Zero dependencies (Python standard library only).
 
 ```bash
-# 1. Profile a model's defaults (model name auto-detected from the endpoint)
-python3 skill/weak-llm-playbook/scripts/default_probe.py http://localhost:8000 5
+# 0. Watch the whole loop offline first — no model, no GPU, no API key:
+python3 demo/demo.py
 
-# 2. Find the holes in your draft spec — and get a fixed, verified prompt back
-#    (everything after the draft is optional and order-free; function name, model,
-#     and mode are auto-detected. Set PROBE_BASE once to drop the URL too.)
-python3 skill/weak-llm-playbook/scripts/spec_holes.py examples/draft_topn.txt \
-        examples/probe_inputs_topn.json http://localhost:8000 --fix
+# 1. Then the same thing against your own endpoint
+#    (vLLM / llama.cpp / ollama / any OpenAI-compatible server):
+export PROBE_BASE=http://localhost:8000        # ollama: http://localhost:11434
+python3 skill/weak-llm-playbook/scripts/selffix.py draft.txt [inputs.json] [--run]
+#    one command: routes the task, finds the spec holes, pins them, verifies.
+#    With --run it also executes and replay-verifies. Review the PINNED lines.
 
-# 3. Turn accumulated profiles into a delegation guide
-python3 skill/weak-llm-playbook/scripts/model_card.py --glob 'profiles/*.json' -o card.md
+# 2. Tool-using tasks (e.g. search a tracker through MCP) run as disposable
+#    agent sessions (default: the `claude` CLI; local wrappers via --cmd):
+python3 skill/weak-llm-playbook/scripts/run_agent.py task.txt --fix
 ```
+
+**What you need** — three layers; use what fits your setup:
+
+| Layer | Needs | You get |
+|---|---|---|
+| Core tools (`selffix.py`, `default_probe.py`, …) | any OpenAI-compatible endpoint | measure defaults, find & fix spec holes, verified executions |
+| Skills (`/weak-llm-selffix`, …) | Claude Code | the same flow from inside a session |
+| Agent tasks (`run_agent.py`) | an agent CLI (`claude`, or a local-LLM wrapper) | K-run probing of tool-using tasks |
+
+Individual tools (default-behavior profiles, model cards, probe packs):
+[docs/USAGE.md](docs/USAGE.md).
 
 ## Findings that shaped the design
 

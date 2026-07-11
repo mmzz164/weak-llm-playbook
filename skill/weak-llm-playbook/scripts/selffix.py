@@ -20,7 +20,8 @@ usage:
   Tool-requiring tasks (Jira/MCP/browse keywords) are auto-routed to
   run_agent.py --fix; its disposable children run with permissions bypassed by
   default. Set WEAK_LLM_AGENT_TOOLS=pat1,pat2 to use an allowlist instead, and
-  WEAK_LLM_AGENT_CMD to override the agent command (default: claude-local).
+  WEAK_LLM_AGENT_CMD to override the agent command (default: claude; e.g.
+  claude-local to run children on a local model).
 
 exit codes: 0 = done (prompt fixed; with --run also executed and verified)
             1 = not delegable / gate failed / verification failed
@@ -63,7 +64,7 @@ def discover_base(cli_base):
     env = os.environ.get("PROBE_BASE")
     if env:
         return env
-    for p in (8000, 8002, 8003):
+    for p in (8000, 11434, 8002, 8003):  # vLLM/llama.cpp convention, ollama, spares
         base = f"http://localhost:{p}"
         try:
             urllib.request.urlopen(base + "/v1/models", timeout=2)
@@ -71,7 +72,7 @@ def discover_base(cli_base):
             return base
         except Exception:
             continue
-    print("NO ENDPOINT: no model server answered on :8000/:8002/:8003 — "
+    print("NO ENDPOINT: no model server answered on :8000/:11434/:8002/:8003 — "
           "set PROBE_BASE or pass a URL")
     sys.exit(2)
 

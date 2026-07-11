@@ -3,14 +3,14 @@
 
 The operator session never holds tool permissions (an interactive agent can be
 talked out of any textual restriction). This script launches disposable
-headless agent sessions (`claude-local -p`) with an explicit tool allowlist
-and a result contract, runs the task K times, and compares the JSON results
+headless agent sessions (`claude -p`, or your local-LLM wrapper via --cmd)
+with a result contract, runs the task K times, and compares the JSON results
 field-by-field under a compare policy — the agent-task equivalent of
 spec_holes: divergence across runs = a hole in your instruction; agreement =
 a default to check against your intent.
 
 usage:
-  run_agent.py task.txt [--cmd "claude-local"] [--allowed PATTERN ...]
+  run_agent.py task.txt [--cmd "claude"] [--allowed PATTERN ...]
                [-k K] [--timeout SEC] [--policy POLICY.json]
                [--contract research|none] [--outdir DIR]
 
@@ -135,7 +135,10 @@ def report(diverged, consensus):
 def main():
     ap = argparse.ArgumentParser(description="K-run headless agent prober (tool tasks)")
     ap.add_argument("task", help="task instruction file")
-    ap.add_argument("--cmd", default="claude-local", help="agent command (may include args)")
+    ap.add_argument("--cmd", default="claude",
+                    help="agent command, may include args (default: claude — the Claude Code "
+                         "CLI; use your local-LLM wrapper, e.g. --cmd claude-local, to run "
+                         "children on a local model)")
     ap.add_argument("--allowed", action="append", default=[],
                     help="tool allowlist pattern (repeatable), e.g. mcp__mcp-atlassian__*. "
                          "Giving this switches OFF the default bypass.")

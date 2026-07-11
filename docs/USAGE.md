@@ -184,7 +184,7 @@ are not its to execute.
 ## run_agent.py — K-run prober for tool-requiring tasks
 
 ```
-run_agent.py task.txt [--cmd "claude-local"] [--allowed mcp__server__*] [--bypass]
+run_agent.py task.txt [--cmd "claude"] [--allowed mcp__server__*] [--bypass]
              [-k 3] [--timeout 900] [--policy POLICY.json] [--contract research|none]
 ```
 

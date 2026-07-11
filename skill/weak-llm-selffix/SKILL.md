@@ -29,8 +29,8 @@ Scripts live in the `weak-llm-playbook/scripts/` directory in the same skills di
 
 2. **Run exactly one command:**
    `python3 <scripts>/selffix.py draft.txt [inputs.json]`
-   The script discovers the endpoint itself ($PROBE_BASE, then ports
-   8000/8002/8003) and auto-routes tool-requiring tasks to disposable agent
+   The script discovers the endpoint itself ($PROBE_BASE, then common
+   local ports including ollama's 11434) and auto-routes tool-requiring tasks to disposable agent
    sessions. Never start, stop or kill servers.
 
 3. **Paste the result verbatim.** Everything from `==== selffix report ====`

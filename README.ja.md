@@ -51,22 +51,33 @@ out.txt を眺めて、意図と違うピン行だけ書き直せばよい——
 
 ## クイックスタート
 
-依存ゼロ(Python標準ライブラリのみ)。OpenAI互換エンドポイント
-(vLLM / llama.cpp / ollama / OpenAI API)とAnthropic APIに対応。
+依存ゼロ(Python標準ライブラリのみ)。
 
 ```bash
-# 1. モデルの既定をプロファイル(モデル名はエンドポイントから自動検出)
-python3 skill/weak-llm-playbook/scripts/default_probe.py http://localhost:8000 5
+# 0. まずオフラインで全ループを見る — モデル・GPU・APIキー不要:
+python3 demo/demo.py
 
-# 2. 委譲前にドラフト仕様の穴を検出 — 修正・検証済みのプロンプトが返ってくる
-#    (draft以降は順不同・省略可。関数名・モデル・モードは自動判別。
-#     PROBE_BASE を設定しておけばURLも不要)
-python3 skill/weak-llm-playbook/scripts/spec_holes.py examples/draft_topn.txt \
-        examples/probe_inputs_topn.json http://localhost:8000 --fix
+# 1. 同じことを自分のエンドポイントで
+#    (vLLM / llama.cpp / ollama / OpenAI互換なら何でも):
+export PROBE_BASE=http://localhost:8000        # ollamaなら http://localhost:11434
+python3 skill/weak-llm-playbook/scripts/selffix.py draft.txt [inputs.json] [--run]
+#    1コマンドで: 振り分け→仕様の穴の検出→ピン留め→検証。--run なら実行と
+#    再生照合まで。返ってきた PINNED の行を意図と照合するだけ。
 
-# 3. 溜まったプロファイルから委譲ガイドを生成
-python3 skill/weak-llm-playbook/scripts/model_card.py --glob 'profiles/*.json' -o card.md
+# 2. ツールを使うタスク(MCPでトラッカー検索など)は使い捨てのエージェント
+#    セッションで実行(既定は `claude` CLI。ローカルLLMラッパーは --cmd で):
+python3 skill/weak-llm-playbook/scripts/run_agent.py task.txt --fix
 ```
+
+**必要なもの** — 3層構成。自分の環境に合う層だけ使えばよい:
+
+| 層 | 必要なもの | できること |
+|---|---|---|
+| コアツール(`selffix.py`, `default_probe.py` 等) | OpenAI互換エンドポイント1つ | 既定の測定・仕様の穴の検出と修正・検証済み実行 |
+| スキル(`/weak-llm-selffix` 等) | Claude Code | 同じフローをセッション内から |
+| エージェントタスク(`run_agent.py`) | エージェントCLI(`claude` かローカルLLMラッパー) | ツール使用タスクのK回プローブ |
+
+個別ツール(既定プロファイル・モデルカード・パック): [docs/USAGE.ja.md](docs/USAGE.ja.md)。
 
 ## 設計の元になった発見
 
