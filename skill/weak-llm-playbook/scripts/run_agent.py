@@ -135,10 +135,13 @@ def report(diverged, consensus):
 def main():
     ap = argparse.ArgumentParser(description="K-run headless agent prober (tool tasks)")
     ap.add_argument("task", help="task instruction file")
-    ap.add_argument("--cmd", default="claude",
-                    help="agent command, may include args (default: claude — the Claude Code "
-                         "CLI; use your local-LLM wrapper, e.g. --cmd claude-local, to run "
-                         "children on a local model)")
+    ap.add_argument("--cmd", default=os.environ.get("WEAK_LLM_AGENT_CMD", "claude"),
+                    help="agent command, may include args. Default: $WEAK_LLM_AGENT_CMD, "
+                         "else 'claude'. Children inherit this session's environment, so "
+                         "launched from inside a local-LLM wrapper session (claude-local "
+                         "etc.), plain 'claude' already runs as that same setup — "
+                         "'run as myself'. Set WEAK_LLM_AGENT_CMD in your shell profile "
+                         "to fix the command for plain-terminal use.")
     ap.add_argument("--allowed", action="append", default=[],
                     help="tool allowlist pattern (repeatable), e.g. mcp__mcp-atlassian__*. "
                          "Giving this switches OFF the default bypass.")
@@ -172,6 +175,10 @@ def main():
         print(f"[contract] appended research contract (policy: {len(policy)} field(s))")
     probe.policy = policy
 
+    src = ("--cmd" if "--cmd" in sys.argv else
+           ("$WEAK_LLM_AGENT_CMD" if os.environ.get("WEAK_LLM_AGENT_CMD") else
+            "default — inherits this session's environment"))
+    print(f"[agent] children run via: {args.cmd} ({src})")
     outdir = args.outdir or (os.path.splitext(args.task)[0] + ".runs")
     valid, diverged, consensus = probe(task, args, outdir)
     if diverged is None:

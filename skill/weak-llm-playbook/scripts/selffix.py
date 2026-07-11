@@ -79,14 +79,12 @@ def discover_base(cli_base):
 
 def route_agent(draft_path, word, k):
     """ツール必須タスクを run_agent.py --fix に転送する(子は既定で権限バイパス)。
-    許可リストに絞りたい場合は WEAK_LLM_AGENT_TOOLS=pat1,pat2 / エージェントの
-    起動コマンドは WEAK_LLM_AGENT_CMD で上書き。"""
+    子の起動コマンドは run_agent 側が解決する($WEAK_LLM_AGENT_CMD > claude。
+    環境は継承されるので、claude-local等のセッション内なら既定のままで「自分自身」)。
+    許可リストに絞りたい場合は WEAK_LLM_AGENT_TOOLS=pat1,pat2。"""
     print(f"[route] agent (tool task: matched '{word}') → run_agent.py "
           "(children run with permissions bypassed by default)")
     cmd = [sys.executable, os.path.join(HERE, "run_agent.py"), draft_path, "--fix"]
-    agent_cmd = os.environ.get("WEAK_LLM_AGENT_CMD")
-    if agent_cmd:
-        cmd += ["--cmd", agent_cmd]
     tools = os.environ.get("WEAK_LLM_AGENT_TOOLS", "")
     if tools and tools != "bypass":
         for pat in tools.split(","):

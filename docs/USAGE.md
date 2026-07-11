@@ -202,7 +202,12 @@ data-dependent lineups become explicit FILL-IN lines for you, since concrete
 IDs cannot be pinned in a reusable task), then re-probes the revised task
 (K more runs) and reports holes before → after.
 
-Children run with `--dangerously-skip-permissions` **by default**; giving
+The agent command resolves as `--cmd` > `$WEAK_LLM_AGENT_CMD` > `claude` — and
+children inherit the calling session's environment, so launched from inside a
+local-LLM wrapper session (claude-local etc.), plain `claude` already runs on
+that same setup: **the default is "run as myself"**. Put
+`export WEAK_LLM_AGENT_CMD=...` in your shell profile to fix it for
+plain-terminal use. Children run with `--dangerously-skip-permissions` **by default**; giving
 `--allowed` switches to an explicit allowlist instead (`--no-bypass` for plain
 permission prompts). Note the trade-off: a bypassed child can use every tool
 (Bash, file writes, all MCP) while processing external content that may
