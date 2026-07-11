@@ -15,6 +15,35 @@ either the spec is ambiguous, or you omitted a rule that differs from the model'
 intent). So: measure the model's defaults, detect the holes in your spec mechanically,
 and write only what's actually needed.
 
+## The three tools
+
+Delegating to a cheap LLM is like outsourcing to a new contractor: every gap in your
+instructions gets filled with *its* habits, not yours. Each tool covers one step.
+
+**`default_probe.py` — learn the model's habits.** *(run once per model)*
+Asks ~50 tiny tasks that each leave exactly one thing unspecified — e.g. "return the
+n-th element" (0- or 1-indexed?) — several times each, and records what the model picked
+and how consistently. The result sorts every habit into: unstable (**always write it in
+your instruction**), stable but possibly not what you meant (**check it** — Qwen extracts
+"3–5 items" as the invented midpoint 4, every single time), or safe to leave out.
+Bonus: diff two models, or fail CI when an upgrade changes a habit (`--assert`).
+
+**`spec_holes.py` — find the holes in your instruction.** *(run before an important task)*
+Gives your draft instruction to the model 5 times and compares the 5 results on the same
+inputs. Wherever they disagree, the model had to guess — that's a spec you forgot to
+write. The report ends with ready-to-paste lines ("`top_n([3,1,2], 2) returns [3, 2]`" /
+"`... returns [3, 1]`"); keep the one you meant and the hole is closed.
+
+**`model_card.py` — turn the measurements into a one-page guide.** *(when profiles pile up)*
+Profiles are JSON; this merges a model's profiles into a Markdown cheat sheet — what not
+to delegate, what to always specify, which defaults to double-check — so you write
+instructions from one page instead of digging through JSON.
+
+Also in the repo: `packs/` (the decision-point batteries as plain JSON — add your own
+domain or language without touching code), `profiles/` and `cards/` (raw measurements
+and generated guides for the models measured so far), and `skill/` (a Claude Code skill
+that runs the whole flow).
+
 ## Quickstart
 
 Zero dependencies (Python standard library only). Works with any OpenAI-compatible
@@ -31,17 +60,6 @@ python3 skill/weak-llm-playbook/scripts/spec_holes.py examples/draft_topn.txt to
 # 3. Turn accumulated profiles into a delegation guide
 python3 skill/weak-llm-playbook/scripts/model_card.py --glob 'profiles/*.json' -o card.md
 ```
-
-## What's inside
-
-| | |
-|---|---|
-| `default_probe.py` | Measures which defaults a model picks (49 built-in decision points, coding and non-coding), how stable they are, and what they cost. Cross-model diff, CI drift check (`--assert`), parallel runs. |
-| `spec_holes.py` | Implements your draft spec K times and flags inputs where the runs disagree — the spec you forgot to write — then emits ready-to-paste spec-block suggestions. |
-| `model_card.py` | Aggregates profiles into a Markdown delegation guide. |
-| `packs/` | Decision-point batteries as plain JSON (instruction-following, SQL, Japanese/English pairs). Add your own domain without touching code. |
-| `cards/`, `profiles/` | Generated guides and raw profiles for the models measured so far. |
-| `skill/` | A Claude Code skill that runs the whole flow: classify → match profile → write the spec → verify independently. |
 
 ## Findings that shaped the design
 
