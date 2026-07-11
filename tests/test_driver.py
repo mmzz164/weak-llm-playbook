@@ -61,4 +61,17 @@ chk("stable agent agrees", div, [])
 div, cons = ra.compare_results([[1], [2]], POL)
 chk("non-dict falls back to whole", div[0][0], "(whole)")
 
+# ---- SORA実測の再現: 件数が同じ比較(count)では見えない顔ぶれ差を set:id が捕まえる
+POL_SET = {"results": "set:id", "count": "exact", "not_found": "exact", "notes": "free"}
+ten = {"results": [{"id": f"SORA-{i}"} for i in range(17376, 17386)],
+       "count": 10, "not_found": False, "notes": "a"}
+ten_other = {"results": [{"id": f"SORA-{i}"} for i in range(17300, 17310)],
+             "count": 10, "not_found": False, "notes": "b"}
+div, cons = ra.compare_results([ten, ten_other], {"results": "count"})
+chk("count policy blind to membership", any(k == "results" for k, _ in div), False)
+div, cons = ra.compare_results([ten, ten_other], POL_SET)
+chk("set:id catches membership diff", any(k == "results" for k, _ in div), True)
+div, cons = ra.compare_results([ten, ten], POL_SET)
+chk("set:id agrees on same lineup", div, [])
+
 finish("test_driver")

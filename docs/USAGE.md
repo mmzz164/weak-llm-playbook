@@ -93,8 +93,8 @@ to check against your intent, plus the failure rate.
   On a clean verify it also writes the expected-behavior table
   `<fixed>.expected.json`, used by `replay_check.py` (below) to verify an execution.
 - **--policy POLICY.json** (json mode) — per-field compare policy
-  `{field: exact|count|exists|free}`: `count` compares only the number of items
-  (granularity, not wording), `exists` only presence, `free` excludes the field
+  `{field: exact|count|exists|set:<key>|free}`: `count` compares only the number of items
+  (granularity, not wording), `exists` only presence, `set:<key>` the set of each array item's <key> (membership, ignoring order and other item fields), `free` excludes the field
   from divergence entirely. This is what makes free-form tasks measurable — see
   `apply_contract.py` below. The policy is recorded in the expected-behavior
   table, so replay_check compares the same way.

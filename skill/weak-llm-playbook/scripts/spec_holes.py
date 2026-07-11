@@ -109,7 +109,8 @@ def detect_kind(inputs_file):
 
 def field_repr(o, key, pol):
     """比較ポリシー適用後のフィールド表現。exact=正規化JSON / count=長さのみ /
-    exists=有無のみ。free は呼び出し側で比較から除外する。"""
+    exists=有無のみ / set:<k>=配列要素の<k>キーの集合(順序・他フィールド無視)。
+    free は呼び出し側で比較から除外する。"""
     if pol == "exists":
         return "present" if isinstance(o, dict) and o.get(key) is not None else "(absent)"
     if not (isinstance(o, dict) and key in o):
@@ -117,6 +118,10 @@ def field_repr(o, key, pol):
     v = o[key]
     if pol == "count" and isinstance(v, (list, dict, str)):
         return f"len={len(v)}"
+    if pol.startswith("set:") and isinstance(v, list):
+        k = pol[4:]
+        vals = sorted(canon(e.get(k)) if isinstance(e, dict) else canon(e) for e in v)
+        return "set{" + ", ".join(vals) + "}"
     return canon(v)
 
 

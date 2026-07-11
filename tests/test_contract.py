@@ -19,6 +19,15 @@ chk("exists present", sh.field_repr(o, "verdict", "exists"), "present")
 chk("exists null = absent", sh.field_repr(o, "empty", "exists"), "(absent)")
 chk("exists missing = absent", sh.field_repr(o, "nope", "exists"), "(absent)")
 
+# ---- set:<key> ポリシー(顔ぶれ比較: 順序・他フィールド無視)
+r = {"results": [{"id": "B", "title": "x"}, {"id": "A", "title": "y"}]}
+chk("set policy sorts ids", sh.field_repr(r, "results", "set:id"), 'set{"A", "B"}')
+r2 = {"results": [{"id": "A", "title": "違う言い回し"}, {"id": "B"}]}
+chk("set policy ignores other fields/order",
+    sh.field_repr(r, "results", "set:id") == sh.field_repr(r2, "results", "set:id"), True)
+chk("set policy on scalars", sh.field_repr({"tags": ["b", "a"]}, "tags", "set:"), 'set{"a", "b"}')
+chk("set policy missing", sh.field_repr({}, "results", "set:id"), "(missing)")
+
 # ---- apply_contract: 族選択は表引き
 TPL = ac.load_templates(str(ROOT / "skill" / "weak-llm-playbook" / "scripts" / "contracts"))
 chk("4 families shipped", sorted(t["family"] for t in TPL),
