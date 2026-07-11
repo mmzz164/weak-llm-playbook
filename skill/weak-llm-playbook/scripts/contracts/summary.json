@@ -1,0 +1,9 @@
+{
+ "family": "summary",
+ "match": ["要約", "まとめて", "サマリ", "要点", "summarize", "summary", "sum up", "key points"],
+ "policy": {"key_points": "count", "one_line": "free"},
+ "instruction_ja": "[出力契約 — 機械検証用]\n出力は次のJSONのみ(コードフェンス・説明文なし):\n{\"key_points\": [\"...\"], \"one_line\": \"...\"}\nkey_points は本文に書かれている事実のみ(推測・意見・一般論を混ぜない)。",
+ "instruction_en": "[Output contract — for mechanical verification]\nOutput ONLY this JSON (no code fences, no prose):\n{\"key_points\": [\"...\"], \"one_line\": \"...\"}\nkey_points must be facts stated in the text only (no inference, opinion, or generic filler).",
+ "render_ja": "one_line を先頭に、key_points を箇条書き。",
+ "render_en": "one_line first, then key_points as bullets."
+}

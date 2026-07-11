@@ -50,8 +50,9 @@ skills: `/weak-llm-fix` (hand it a draft prompt, get back the normalized one),
 `/weak-llm-selffix` (the weak-operator variant: the weak LLM runs the fix loop on
 *itself* — every step is graded by gate scripts, never by the model, and all pinned
 lines come back for human review; add `run` to also execute the fixed prompt and
-verify the result by replaying the measured behaviors), and `weak-llm-playbook`
-(the decision-layer reference they build on).
+verify the result by replaying the measured behaviors; free-form tasks like
+"review this page" get a shadow JSON contract behind the scenes, so users never
+write JSON), and `weak-llm-playbook` (the decision-layer reference they build on).
 
 ## Quickstart
 

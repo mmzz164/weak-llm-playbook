@@ -26,7 +26,7 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from llm_client import LLMClient, detect_model, find_json
-from spec_holes import canon, extract_code, has_ja, load_fn
+from spec_holes import canon, extract_code, field_repr, has_ja, load_fn
 
 CLIENT = None
 
@@ -53,8 +53,10 @@ def verify_code_fn(f, expected):
     return mism
 
 
-def verify_json_outputs(outs, expected):
-    """outs: {input_index: parsed_json_or_None}. Same contract as verify_code_fn."""
+def verify_json_outputs(outs, expected, policy=None):
+    """outs: {input_index: parsed_json_or_None}. Same contract as verify_code_fn.
+    policy: per-field compare policy recorded in the expected table."""
+    policy = policy or {}
     mism = []
     for e in expected:
         o = outs.get(e["input"])
@@ -64,10 +66,8 @@ def verify_json_outputs(outs, expected):
             got = canon(o)
         elif not isinstance(o, dict):
             got = canon(o)
-        elif e["field"] in o:
-            got = canon(o[e["field"]])
         else:
-            got = "(missing)"
+            got = field_repr(o, e["field"], policy.get(e["field"], "exact"))
         if got != e["value"]:
             mism.append((e, got))
     return mism
@@ -163,7 +163,7 @@ def main():
                 docs.setdefault(e["input"], e["doc"])
             outs = {i: find_json(gen(task + sep + doc, temp, 800))
                     for i, doc in sorted(docs.items())}
-            mism = verify_json_outputs(outs, expected)
+            mism = verify_json_outputs(outs, expected, table.get("policy"))
             if not mism:
                 dst = out_path(args.prompt, ".outputs.json")
                 json.dump([{"input": i, "output": outs[i]} for i in sorted(outs)],

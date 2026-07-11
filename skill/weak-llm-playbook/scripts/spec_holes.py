@@ -107,8 +107,23 @@ def detect_kind(inputs_file):
 
 # ==== 抽出モード (--kind json) ====
 
-def probe_json(task, texts, K):
-    """各入力テキストに同じ指示をK回実行し、JSON出力をフィールド単位で比較。"""
+def field_repr(o, key, pol):
+    """比較ポリシー適用後のフィールド表現。exact=正規化JSON / count=長さのみ /
+    exists=有無のみ。free は呼び出し側で比較から除外する。"""
+    if pol == "exists":
+        return "present" if isinstance(o, dict) and o.get(key) is not None else "(absent)"
+    if not (isinstance(o, dict) and key in o):
+        return "(missing)"
+    v = o[key]
+    if pol == "count" and isinstance(v, (list, dict, str)):
+        return f"len={len(v)}"
+    return canon(v)
+
+
+def probe_json(task, texts, K, policy=None):
+    """各入力テキストに同じ指示をK回実行し、JSON出力をフィールド単位で比較。
+    policy = {field: exact|count|exists|free}(省略時は全フィールドexact)。"""
+    policy = policy or {}
     sep = "\n\n--- 入力 ---\n" if has_ja(task) else "\n\n--- input ---\n"
     total = bad = 0
     per_input = []
@@ -132,7 +147,10 @@ def probe_json(task, texts, K):
             continue
         if all(isinstance(o, dict) for o in outs):
             for key in sorted(set().union(*[set(o) for o in outs])):
-                vals = [canon(o[key]) if key in o else "(missing)" for o in outs]
+                pol = policy.get(key, "exact")
+                if pol == "free":
+                    continue
+                vals = [field_repr(o, key, pol) for o in outs]
                 c = Counter(vals)
                 (diverged if len(c) > 1 else consensus).append(
                     (i, label, key, c if len(c) > 1 else vals[0]))
@@ -316,7 +334,12 @@ def pin_block_json(diverged, ja):
         (top, n), *rest = c.most_common()
         alts = " / ".join(f"{v} ({m})" for v, m in rest)
         note = (f"   # 他候補: {alts}" if ja else f"   # alternatives: {alts}") if rest else ""
-        if ja:
+        if top.startswith("len="):
+            if ja:
+                lines.append(f"- 入力例「{label}…」では \"{key}\" の件数 = {top[4:]} とする{note}")
+            else:
+                lines.append(f"- for input \"{label}…\": count of \"{key}\" = {top[4:]}{note}")
+        elif ja:
             lines.append(f"- 入力例「{label}…」では \"{key}\" = {top} とする{note}")
         else:
             lines.append(f"- for input \"{label}…\": \"{key}\" = {top}{note}")
@@ -327,11 +350,11 @@ def expected_path(fix_out):
     return os.path.splitext(fix_out)[0] + ".expected.json"
 
 
-def build_expected(kind, fn_label, consensus, texts=None):
+def build_expected(kind, fn_label, consensus, texts=None, policy=None):
     """検証済みプロンプトの「答え合わせ表」: 全プローブ入力の合意挙動。
     replay_check.py が実行結果をこの表と機械照合する(runモードの最終ゲート)。"""
     if kind == "json":
-        return {"kind": "json",
+        return {"kind": "json", "policy": policy or {},
                 "expected": [{"input": i, "doc": texts[i], "field": key, "value": v}
                              for i, label, key, v in consensus]}
     return {"kind": "code", "fn": fn_label,
@@ -362,6 +385,9 @@ def main():
     ap.add_argument("--kind", choices=["auto", "code", "json"], default="auto",
                     help="auto (default): inferred from inputs.json — array of strings = json mode "
                          "(extraction), array of argument tuples = code mode")
+    ap.add_argument("--policy", default=None, metavar="POLICY.json",
+                    help="json mode: per-field compare policy {field: exact|count|exists|free} "
+                         "(free fields are excluded from divergence; written by apply_contract.py)")
     ap.add_argument("--fix", nargs="?", const="", metavar="OUT.txt", default=None,
                     help="write a revised prompt with diverging behaviors pinned to the majority, then "
                          "re-probe it to verify (exit 1 if holes remain). Default output: <draft>.fixed.txt")
@@ -398,13 +424,16 @@ def main():
         texts = json.load(open(inputs_file))
         if not (isinstance(texts, list) and texts and all(isinstance(x, str) for x in texts)):
             print("!! inputs.json must be an array of strings (input texts)"); sys.exit(2)
-        print(f"# spec-hole detection (extraction mode): model={model} K={K} inputs={len(texts)}")
-        res = probe_json(task, texts, K)
+        policy = json.load(open(args.policy)) if args.policy else None
+        print(f"# spec-hole detection (extraction mode): model={model} K={K} inputs={len(texts)}"
+              + (f" policy={len(policy)} field(s)" if policy else ""))
+        res = probe_json(task, texts, K, policy)
         report_json(res)
-        probe_again = lambda t: probe_json(t, texts, K)
+        probe_again = lambda t: probe_json(t, texts, K, policy)
         block = lambda d: pin_block_json(d, ja)
         fn_label = None
     else:
+        policy = None
         print(f"# spec-hole detection: fn={fn or '(auto)'} model={model} K={K}")
         inputs = collect_inputs(task, fn, inputs_file)
         res = probe_code(task, fn, inputs, K)
@@ -421,7 +450,7 @@ def main():
     if not res["diverged"]:
         open(fix_out, "w").write(task + "\n")
         print(f"\n[fix] no holes found — draft is already unambiguous; wrote it unchanged to {fix_out}")
-        write_expected(fix_out, build_expected(kind, fn_label, res["consensus"], texts))
+        write_expected(fix_out, build_expected(kind, fn_label, res["consensus"], texts, policy))
         return
     fixed = task + "\n\n" + block(res["diverged"]) + "\n"
     open(fix_out, "w").write(fixed)
@@ -432,7 +461,7 @@ def main():
     print(f"[fix] holes: {before} → {after}")
     if after == 0:
         print(f"[fix] verified: behavior is now reproducible. Review {fix_out} and rewrite any pinned line that does not match your intent.")
-        write_expected(fix_out, build_expected(kind, fn_label, res2["consensus"], texts))
+        write_expected(fix_out, build_expected(kind, fn_label, res2["consensus"], texts, policy))
     else:
         print("[fix] remaining holes:")
         if kind == "json":

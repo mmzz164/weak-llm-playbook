@@ -1,0 +1,9 @@
+{
+ "family": "review",
+ "match": ["レビュー", "検査", "点検", "査読", "校閲", "review", "inspect", "audit", "proofread"],
+ "policy": {"issues": "count", "verdict": "exact", "summary": "free"},
+ "instruction_ja": "[出力契約 — 機械検証用]\n出力は次のJSONのみ(コードフェンス・説明文なし):\n{\"issues\": [{\"type\": \"...\", \"where\": \"...\", \"note\": \"...\"}], \"verdict\": \"ok|minor|major\", \"summary\": \"...\"}\n問題が無ければ \"issues\": [] かつ \"verdict\": \"ok\"。対象の中で確認できたことだけを書き、推測で問題を作らない。",
+ "instruction_en": "[Output contract — for mechanical verification]\nOutput ONLY this JSON (no code fences, no prose):\n{\"issues\": [{\"type\": \"...\", \"where\": \"...\", \"note\": \"...\"}], \"verdict\": \"ok|minor|major\", \"summary\": \"...\"}\nIf there are no problems: \"issues\": [] and \"verdict\": \"ok\". Report only what you verified in the target; never invent findings.",
+ "render_ja": "1行目に verdict と issues の件数、以下 issues を「- [type] where: note」で箇条書き。",
+ "render_en": "First line: verdict and issue count; then one bullet per issue as \"- [type] where: note\"."
+}

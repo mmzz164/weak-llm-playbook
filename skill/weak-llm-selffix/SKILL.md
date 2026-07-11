@@ -8,7 +8,10 @@ description: >-
   スクリプトのexit codeが行う)。2モード: "/weak-llm-selffix <ドラフト>" は正常化済み
   プロンプトを返し、"/weak-llm-selffix <ドラフト> run" はそのまま実行して、fix時に記録した
   答え合わせ表(expected.json)との機械照合(replay_check.py)まで通った成果物を返す。
-  強い操作者が使うなら [[weak-llm-fix]] / [[weak-llm-run]]。
+  自由文タスク(レビュー・分類・要約・資料内検索)は apply_contract.py が影の出力契約
+  (JSONは測定器の内部形式でありユーザーは書かない)を当てて測定可能にし、自由文フィールドは
+  比較ポリシー(count/exists/free)でノイズ除外。強い操作者が使うなら
+  [[weak-llm-fix]] / [[weak-llm-run]]。
 ---
 
 # weak-llm-selffix — normalize a draft prompt with zero judgment calls
@@ -27,11 +30,18 @@ in the current directory or /tmp.
    argument is a file path, use that file as `draft.txt`; otherwise write the
    argument text to `draft.txt` unchanged.
 
-2. **Scope gate.** The draft must ask for exactly one of:
-   (a) implementing a function / a piece of code, or
-   (b) extracting or reformatting data from given documents.
-   If it asks for anything else (searching, browsing, MCP or other tool use,
-   multi-step agent work), reply `OUT OF SCOPE: <one-line reason>` and stop.
+2. **Scope gate.**
+   - If the draft needs external tools (MCP, web browsing, calling other
+     services), reply `OUT OF SCOPE: needs external tools` and stop.
+   - (a) implementing a function / a piece of code → CODE TASK.
+   - (b) extracting or reformatting data from given documents → EXTRACTION TASK.
+   - (c) anything else (review, classify, summarize, look something up in
+     given material, ...): run `python3 <scripts>/apply_contract.py draft.txt`.
+     - exit 0 → CONTRACT TASK: from now on use `draft.contracted.txt` wherever
+       these steps say `draft.txt`, and append `--policy draft.policy.json` to
+       every spec_holes command. Note the "render hint" line it prints.
+       Everything else works exactly like EXTRACTION.
+     - exit 1 → reply `OUT OF SCOPE: no contract family matches` and stop.
 
 3. **Endpoint.** If `$PROBE_BASE` is set, use it. Otherwise run
    `for p in 8000 8002 8003; do curl -s -m2 http://localhost:$p/v1/models; done`
@@ -55,6 +65,10 @@ in the current directory or /tmp.
      4. one document in a different format (a range like "3-5", another date
         style, etc.)
    - 5–8 inputs total.
+   - CONTRACT TASK: the documents are the user's target(s) — the page to
+     review, the items to classify, and so on. If the user supplied fewer
+     than 4, use what exists and pass `--min <number of documents>` to
+     check_inputs.py in step 5.
 
 5. **Inputs gate.** Run `python3 <scripts>/check_inputs.py inputs.json`.
    If it prints FAIL, add exactly the inputs it suggests (copy them verbatim)
@@ -103,6 +117,11 @@ in the current directory or /tmp.
    ARTIFACT: <path printed by replay_check>
    REPLAY: <paste replay_check's PASS line>
    ```
+
+   CONTRACT TASK only: additionally render the artifact for humans — follow
+   the "render hint" printed by apply_contract.py, using the data in the
+   `.outputs.json` artifact. People read the rendering; machines and reviews
+   use the JSON artifact.
 
 ## Hard rules
 - Never edit the draft's own text. Fixes may only APPEND pinned lines

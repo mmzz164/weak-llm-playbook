@@ -1,0 +1,9 @@
+{
+ "family": "classify",
+ "match": ["分類", "仕分け", "カテゴリ", "振り分け", "classify", "categorize", "triage"],
+ "policy": {"label": "exact", "reason": "free"},
+ "instruction_ja": "[出力契約 — 機械検証用]\n出力は次のJSONのみ(コードフェンス・説明文なし):\n{\"label\": \"...\", \"reason\": \"...\"}\nlabel は指示文に列挙された選択肢から一字一句そのまま選ぶ。どれにも該当しなければ \"label\": \"other\"。",
+ "instruction_en": "[Output contract — for mechanical verification]\nOutput ONLY this JSON (no code fences, no prose):\n{\"label\": \"...\", \"reason\": \"...\"}\nlabel must be copied verbatim from the choices listed in the instruction; if none applies, use \"label\": \"other\".",
+ "render_ja": "「label(reason の要旨)」を1行で。",
+ "render_en": "One line: label (gist of reason)."
+}

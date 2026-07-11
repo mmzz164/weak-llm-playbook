@@ -92,6 +92,12 @@ to check against your intent, plus the failure rate.
   *reproducible* so your review is over concrete lines instead of imagined ambiguities.
   On a clean verify it also writes the expected-behavior table
   `<fixed>.expected.json`, used by `replay_check.py` (below) to verify an execution.
+- **--policy POLICY.json** (json mode) — per-field compare policy
+  `{field: exact|count|exists|free}`: `count` compares only the number of items
+  (granularity, not wording), `exists` only presence, `free` excludes the field
+  from divergence entirely. This is what makes free-form tasks measurable — see
+  `apply_contract.py` below. The policy is recorded in the expected-behavior
+  table, so replay_check compares the same way.
 
 ## check_inputs.py / check_fixed.py — mechanical gates for the fix loop
 
@@ -137,6 +143,24 @@ reproduces every measured behavior. On PASS it saves the artifact next to the
 prompt (`.impl.py` for code, `.outputs.json` for extraction). `--code` instead
 verifies an existing implementation offline. Executes generated code — same
 caveat as the probes.
+
+## apply_contract.py — shadow contracts for free-form tasks
+
+```
+apply_contract.py draft.txt [--dir DIR] [--list]
+```
+
+Most people never write JSON specs — so here JSON is the measurement
+instrument's interface, not the user's. Given a plain-language draft ("review
+this page"), this script picks a contract family by keyword lookup
+(`contracts/*.json`: review / classify / summary / research), appends that
+family's output-contract instruction to the draft (`<draft>.contracted.txt`),
+and writes the matching compare policy (`<draft>.policy.json`) for
+`spec_holes --policy`. Free-text fields are marked `free`, so wording
+differences don't drown the real divergences (scales, counts, empty-case
+conventions, missing-data handling). Selection is a table lookup, not a
+judgment call — a weak operator can run it. Add a family by dropping a JSON
+file into `contracts/`; no code changes needed.
 
 ## model_card.py — delegation-guide generator
 
