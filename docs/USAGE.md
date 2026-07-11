@@ -103,7 +103,7 @@ to check against your intent, plus the failure rate.
 
 Both scripts grade an operator's work products by exit code (0 = PASS, 1 = FAIL,
 2 = malformed file), so the fix loop can be driven by a weak operator — including
-the weak LLM itself (`skill/weak-llm-selffix`) — without ever trusting its
+a weak LLM operator — without ever trusting its
 self-assessment.
 
 ```
@@ -176,10 +176,8 @@ match → shadow contract; document inputs → extraction), probe-input generati
 (bounded LLM calls, auto-repaired against check_inputs' suggestions), the
 bounded fix loop, the handoff gate, and — with `--run` — execution plus replay
 verification. Exit codes: 0 done / 1 not delegable or failed verification /
-2 infrastructure / 3 out of scope. The `skill/weak-llm-selffix` and
-`skill/weak-llm-selfrun` skills are thin front-ends over this command: an
-interactive agent can be talked out of following instructions, but these steps
-are not its to execute.
+2 infrastructure / 3 out of scope. An interactive agent can be talked out of following
+instructions, but these steps are not its to execute — that is the point.
 
 ## run_agent.py — K-run prober for tool-requiring tasks
 

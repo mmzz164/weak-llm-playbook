@@ -22,7 +22,7 @@ import tempfile
 import time
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-SCRIPTS = os.path.join(os.path.dirname(HERE), "skill", "weak-llm-playbook", "scripts")
+SCRIPTS = os.path.join(os.path.dirname(HERE), "tools")
 
 DRAFT = "Implement top_n(lst, n) that returns the top n items of the numeric list lst."
 INPUTS = "[[[3,1,2],2],[[],2],[[5],2],[[2,2,1],2],[[3,1,2],0],[[3,1,2],-1]]"

@@ -4,7 +4,7 @@ import pathlib
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 PACKS = ROOT / "packs"
-sys.path.insert(0, str(ROOT / "skill" / "weak-llm-playbook" / "scripts"))
+sys.path.insert(0, str(ROOT / "tools"))
 sys.argv = ["default_probe.py", "dummy-model", "http://localhost:1"]  # 自動検出を回避
 
 import default_probe as dp  # noqa: E402

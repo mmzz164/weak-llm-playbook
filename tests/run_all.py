@@ -7,7 +7,7 @@ import sys
 
 HERE = pathlib.Path(__file__).resolve().parent
 ROOT = HERE.parent
-PROBE = ROOT / "skill" / "weak-llm-playbook" / "scripts" / "default_probe.py"
+PROBE = ROOT / "tools" / "default_probe.py"
 
 failed = []
 

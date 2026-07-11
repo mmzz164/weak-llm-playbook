@@ -7,7 +7,7 @@ import tempfile
 
 from _common import chk, finish, ROOT
 
-SCRIPTS = ROOT / "skill" / "weak-llm-playbook" / "scripts"
+SCRIPTS = ROOT / "tools"
 import check_inputs as ci  # noqa: E402 (_common が scripts を path に載せている)
 
 # ---- check_code: 完全なセットは指摘ゼロ

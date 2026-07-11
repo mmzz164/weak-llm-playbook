@@ -29,7 +29,7 @@ chk("set policy on scalars", sh.field_repr({"tags": ["b", "a"]}, "tags", "set:")
 chk("set policy missing", sh.field_repr({}, "results", "set:id"), "(missing)")
 
 # ---- apply_contract: 族選択は表引き
-TPL = ac.load_templates(str(ROOT / "skill" / "weak-llm-playbook" / "scripts" / "contracts"))
+TPL = ac.load_templates(str(ROOT / "tools" / "contracts"))
 chk("4 families shipped", sorted(t["family"] for t in TPL),
     ["classify", "research", "review", "summary"])
 
