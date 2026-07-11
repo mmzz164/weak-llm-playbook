@@ -87,4 +87,22 @@ auto_en, manual_en = ra.pin_lines(DIV, ja=False)
 chk("en scalar pin", auto_en[0], '- "count" = 3   # alternatives: 5 (1)')
 chk("en FILL-IN", "FILL IN" in manual_en[0], True)
 
+
+# ---- 子コマンドの権限: 既定バイパス / --allowed で許可リスト / --no-bypass で素
+class _Args:
+    def __init__(self, allowed=(), no_bypass=False):
+        self.allowed = list(allowed)
+        self.no_bypass = no_bypass
+
+
+chk("default is bypass",
+    ra.child_cmd(["claude"], "t", _Args()),
+    ["claude", "-p", "t", "--dangerously-skip-permissions"])
+chk("--allowed switches bypass off",
+    ra.child_cmd(["claude"], "t", _Args(allowed=["mcp__x__*"])),
+    ["claude", "-p", "t", "--allowedTools", "mcp__x__*"])
+chk("--no-bypass is plain",
+    ra.child_cmd(["claude"], "t", _Args(no_bypass=True)),
+    ["claude", "-p", "t"])
+
 finish("test_driver")

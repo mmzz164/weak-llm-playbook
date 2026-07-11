@@ -14,12 +14,18 @@ usage:
              [--model M] [--api openai|anthropic] [--key KEY]
   inputs.json: code task = array of argument tuples / otherwise = the target
   documents (array of strings). Required for extraction/contract tasks;
-  auto-generated for code tasks when omitted. URL defaults to $PROBE_BASE.
+  auto-generated for code tasks when omitted. Endpoint resolution: explicit URL
+  > $PROBE_BASE > first of localhost:8000/8002/8003 that answers.
+
+  Tool-requiring tasks (Jira/MCP/browse keywords) are auto-routed to
+  run_agent.py --fix; its disposable children run with permissions bypassed by
+  default. Set WEAK_LLM_AGENT_TOOLS=pat1,pat2 to use an allowlist instead, and
+  WEAK_LLM_AGENT_CMD to override the agent command (default: claude-local).
 
 exit codes: 0 = done (prompt fixed; with --run also executed and verified)
             1 = not delegable / gate failed / verification failed
             2 = infrastructure error (endpoint, files)
-            3 = out of scope (needs external tools -> run_agent.py, or no route)
+            3 = out of scope (no route)
 """
 import argparse
 import json
@@ -27,6 +33,7 @@ import os
 import re
 import subprocess
 import sys
+import urllib.request
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
@@ -47,6 +54,45 @@ def needs_tools(draft):
 def looks_like_code(draft):
     low = draft.lower()
     return any(w in low for w in CODE_WORDS)
+
+
+def discover_base(cli_base):
+    """接続先の自動解決: 明示 > $PROBE_BASE > 既知ポートの疎通確認。"""
+    if cli_base:
+        return cli_base
+    env = os.environ.get("PROBE_BASE")
+    if env:
+        return env
+    for p in (8000, 8002, 8003):
+        base = f"http://localhost:{p}"
+        try:
+            urllib.request.urlopen(base + "/v1/models", timeout=2)
+            print(f"[endpoint] {base}")
+            return base
+        except Exception:
+            continue
+    print("NO ENDPOINT: no model server answered on :8000/:8002/:8003 — "
+          "set PROBE_BASE or pass a URL")
+    sys.exit(2)
+
+
+def route_agent(draft_path, word, k):
+    """ツール必須タスクを run_agent.py --fix に転送する(子は既定で権限バイパス)。
+    許可リストに絞りたい場合は WEAK_LLM_AGENT_TOOLS=pat1,pat2 / エージェントの
+    起動コマンドは WEAK_LLM_AGENT_CMD で上書き。"""
+    print(f"[route] agent (tool task: matched '{word}') → run_agent.py "
+          "(children run with permissions bypassed by default)")
+    cmd = [sys.executable, os.path.join(HERE, "run_agent.py"), draft_path, "--fix"]
+    agent_cmd = os.environ.get("WEAK_LLM_AGENT_CMD")
+    if agent_cmd:
+        cmd += ["--cmd", agent_cmd]
+    tools = os.environ.get("WEAK_LLM_AGENT_TOOLS", "")
+    if tools and tools != "bypass":
+        for pat in tools.split(","):
+            cmd += ["--allowed", pat.strip()]
+    if k:
+        cmd += ["-k", str(k)]
+    sys.exit(subprocess.run(cmd).returncode)
 
 
 def run_tool(script, *a):
@@ -136,8 +182,7 @@ def main():
     args = ap.parse_args()
 
     inputs_path = next((a for a in args.rest if a.endswith(".json")), None)
-    base = next((a for a in args.rest if a.startswith(("http://", "https://"))),
-                os.environ.get("PROBE_BASE", "http://localhost:8000"))
+    cli_base = next((a for a in args.rest if a.startswith(("http://", "https://"))), None)
     try:
         draft = open(args.draft).read().strip()
     except OSError as e:
@@ -146,9 +191,8 @@ def main():
     # ---- routing (table lookup, no judgment)
     w = needs_tools(draft)
     if w:
-        print(f"OUT OF SCOPE: needs external tools (matched: {w}). "
-              "Use run_agent.py — the operator session must not run this itself.")
-        sys.exit(3)
+        route_agent(args.draft, w, args.k)  # does not return
+    base = discover_base(cli_base)
 
     root = os.path.splitext(args.draft)[0]
     work_draft, policy_file, family, render_hint = args.draft, None, None, None

@@ -168,9 +168,11 @@ file into `contracts/`; no code changes needed.
 selffix.py draft.txt [inputs.json] [URL] [--run] [-k K]
 ```
 
-Drives the full self-fix procedure as code: routing (external-tool keywords →
-out of scope; argument-tuple inputs → code; contract family match → shadow
-contract; document inputs → extraction), probe-input generation for code tasks
+Drives the full self-fix procedure as code: endpoint discovery ($PROBE_BASE,
+then ports 8000/8002/8003), routing (external-tool keywords → hand-off to
+run_agent.py --fix, children bypassed by default, WEAK_LLM_AGENT_TOOLS /
+WEAK_LLM_AGENT_CMD to customize; argument-tuple inputs → code; contract family
+match → shadow contract; document inputs → extraction), probe-input generation for code tasks
 (bounded LLM calls, auto-repaired against check_inputs' suggestions), the
 bounded fix loop, the handoff gate, and — with `--run` — execution plus replay
 verification. Exit codes: 0 done / 1 not delegable or failed verification /
@@ -200,10 +202,11 @@ data-dependent lineups become explicit FILL-IN lines for you, since concrete
 IDs cannot be pinned in a reusable task), then re-probes the revised task
 (K more runs) and reports holes before → after.
 
-`--bypass` passes `--dangerously-skip-permissions` to the children instead of an
-allowlist — convenient, but the child can then use every tool (Bash, file
-writes, all MCP) while processing external content that may contain injected
-instructions. Prefer `--allowed` when the task reads untrusted material.
+Children run with `--dangerously-skip-permissions` **by default**; giving
+`--allowed` switches to an explicit allowlist instead (`--no-bypass` for plain
+permission prompts). Note the trade-off: a bypassed child can use every tool
+(Bash, file writes, all MCP) while processing external content that may
+contain injected instructions — use `--allowed` for untrusted material.
 
 ## model_card.py — delegation-guide generator
 

@@ -78,17 +78,25 @@ def pin_lines(diverged, ja):
     return auto, manual
 
 
+def child_cmd(base_cmd, task, args):
+    """子セッションの起動コマンド。--allowed 指定時は許可リスト、
+    未指定なら既定でバイパス(--no-bypass で素の権限確認に戻せる)。"""
+    cmd = base_cmd + ["-p", task]
+    if args.allowed:
+        for pat in args.allowed:
+            cmd += ["--allowedTools", pat]
+    elif not args.no_bypass:
+        cmd.append("--dangerously-skip-permissions")
+    return cmd
+
+
 def probe(task, args, outdir):
     """タスクをK回実行して比較。(valid, diverged, consensus) を返す。"""
     os.makedirs(outdir, exist_ok=True)
     base_cmd = shlex.split(args.cmd)
     results = []
     for i in range(args.k):
-        cmd = base_cmd + ["-p", task]
-        if args.bypass:
-            cmd.append("--dangerously-skip-permissions")
-        for pat in args.allowed:
-            cmd += ["--allowedTools", pat]
+        cmd = child_cmd(base_cmd, task, args)
         t0 = time.time()
         try:
             sp = subprocess.run(cmd, capture_output=True, text=True, timeout=args.timeout)
@@ -129,13 +137,13 @@ def main():
     ap.add_argument("task", help="task instruction file")
     ap.add_argument("--cmd", default="claude-local", help="agent command (may include args)")
     ap.add_argument("--allowed", action="append", default=[],
-                    help="tool allowlist pattern (repeatable), e.g. mcp__mcp-atlassian__*")
+                    help="tool allowlist pattern (repeatable), e.g. mcp__mcp-atlassian__*. "
+                         "Giving this switches OFF the default bypass.")
     ap.add_argument("--bypass", action="store_true",
-                    help="pass --dangerously-skip-permissions to child sessions instead of "
-                         "an allowlist. Convenient, but the child can then use EVERY tool "
-                         "(Bash, file writes, all MCP) — and it processes external content "
-                         "that may contain injected instructions. Prefer --allowed when the "
-                         "task reads untrusted material.")
+                    help="(default behavior; kept for compatibility)")
+    ap.add_argument("--no-bypass", action="store_true",
+                    help="no bypass and no allowlist: children ask permissions normally "
+                         "(headless children usually cannot answer prompts — mostly for debugging)")
     ap.add_argument("-k", type=int, default=3, help="number of runs (default 3 — agent runs are expensive)")
     ap.add_argument("--timeout", type=int, default=900, help="seconds per run (default 900)")
     ap.add_argument("--policy", default=None, help="compare-policy JSON (default: research contract's)")
