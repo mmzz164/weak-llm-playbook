@@ -162,6 +162,38 @@ conventions, missing-data handling). Selection is a table lookup, not a
 judgment call — a weak operator can run it. Add a family by dropping a JSON
 file into `contracts/`; no code changes needed.
 
+## selffix.py — the whole pipeline as one command
+
+```
+selffix.py draft.txt [inputs.json] [URL] [--run] [-k K]
+```
+
+Drives the full self-fix procedure as code: routing (external-tool keywords →
+out of scope; argument-tuple inputs → code; contract family match → shadow
+contract; document inputs → extraction), probe-input generation for code tasks
+(bounded LLM calls, auto-repaired against check_inputs' suggestions), the
+bounded fix loop, the handoff gate, and — with `--run` — execution plus replay
+verification. Exit codes: 0 done / 1 not delegable or failed verification /
+2 infrastructure / 3 out of scope. The `skill/weak-llm-selffix` and
+`skill/weak-llm-selfrun` skills are thin front-ends over this command: an
+interactive agent can be talked out of following instructions, but these steps
+are not its to execute.
+
+## run_agent.py — K-run prober for tool-requiring tasks
+
+```
+run_agent.py task.txt [--cmd "claude-local"] [--allowed mcp__server__*]
+             [-k 3] [--timeout 900] [--policy POLICY.json] [--contract research|none]
+```
+
+For tasks that need external tools (search a tracker, browse), the operator
+session should hold **no** tool permissions. This script launches disposable
+headless agent sessions (`<cmd> -p`) with an explicit `--allowedTools`
+allowlist, appends the research result-contract if the task has none, runs the
+task K times, and compares the JSON results field-by-field under the compare
+policy — spec_holes for agent tasks: divergence = a hole in your instruction.
+Raw transcripts and `result<i>.json` artifacts are kept per run.
+
 ## model_card.py — delegation-guide generator
 
 ```

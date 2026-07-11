@@ -136,6 +136,32 @@ apply_contract.py draft.txt [--dir DIR] [--list]
 だけが残る。選択は表引きであって判断ではないので、弱い操作者でも回せる。族の追加は
 `contracts/` にJSONを置くだけ(コード変更不要)。
 
+## selffix.py — パイプライン全体を1コマンドに
+
+```
+selffix.py draft.txt [inputs.json] [URL] [--run] [-k K]
+```
+
+self-fix手順の全体をコードとして実行する: 振り分け(外部ツール語→対象外 / 引数の組の
+入力→コード / 契約族マッチ→影の契約 / 文書入力→抽出)、コードタスクのプローブ入力生成
+(有界のLLM呼び出し+check_inputsの提案で自動補修)、有界fixループ、受け渡しゲート、
+そして `--run` で実行+再生照合まで。exit: 0=完了 / 1=委譲不適・検証失敗 / 2=インフラ /
+3=対象外。`skill/weak-llm-selffix` と `skill/weak-llm-selfrun` はこのコマンドの薄い前面
+——対話エージェントは指示を「説得」で破れるが、手順が自分の実行物でなければ飛ばしようがない。
+
+## run_agent.py — ツール必須タスクのK回プローブ
+
+```
+run_agent.py task.txt [--cmd "claude-local"] [--allowed mcp__server__*]
+             [-k 3] [--timeout 900] [--policy POLICY.json] [--contract research|none]
+```
+
+外部ツールが要るタスク(トラッカー検索など)では、操作者セッションはツール権限を
+**一切持たない**のが原則。このスクリプトが使い捨てのheadlessエージェント(`<cmd> -p`)を
+明示的な `--allowedTools` 許可リスト付きで起動し、契約が無ければresearch契約を追記して
+K回実行、結果JSONを比較ポリシー付きでフィールド比較する——エージェントタスク版の
+spec_holes(発散=指示の穴)。各runの生ログと `result<i>.json` を成果物として保存。
+
 ## model_card.py — 委譲ガイド生成器
 
 ```
