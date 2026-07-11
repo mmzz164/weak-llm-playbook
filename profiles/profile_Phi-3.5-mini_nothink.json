@@ -5,12 +5,12 @@
  "rows": [
   {
    "id": "interval_touch",
-   "default": "接触も統合",
+   "default": "touching merged",
    "stability": 1.0,
    "dist": {
-    "接触も統合": 5
+    "touching merged": 5
    },
-   "canonical": "接触も統合"
+   "canonical": "touching merged"
   },
   {
    "id": "round_half",
@@ -23,13 +23,13 @@
   },
   {
    "id": "avg_empty",
-   "default": "例外",
+   "default": "raises",
    "stability": 0.8,
    "dist": {
-    "例外": 4,
-    "0を返す": 1
+    "raises": 4,
+    "returns 0": 1
    },
-   "canonical": "例外"
+   "canonical": "raises"
   },
   {
    "id": "dedup_order",
@@ -37,28 +37,28 @@
    "stability": 0.4,
    "dist": {
     "EXEC_ERR:NameError": 2,
-    "順序保持": 1,
-    "ソート済": 2
+    "order preserved": 1,
+    "sorted": 2
    },
    "canonical": "EXEC_ERR:NameError"
   },
   {
    "id": "topn_short",
-   "default": "不足時は全件",
+   "default": "returns all when short",
    "stability": 1.0,
    "dist": {
-    "不足時は全件": 5
+    "returns all when short": 5
    },
-   "canonical": "不足時は全件"
+   "canonical": "returns all when short"
   },
   {
    "id": "split_case",
-   "default": "大小無視",
+   "default": "case-insensitive",
    "stability": 1.0,
    "dist": {
-    "大小無視": 5
+    "case-insensitive": 5
    },
-   "canonical": "大小無視"
+   "canonical": "case-insensitive"
   },
   {
    "id": "fib_index",
@@ -71,48 +71,48 @@
   },
   {
    "id": "palindrome_norm",
-   "default": "厳密一致",
+   "default": "strict comparison",
    "stability": 1.0,
    "dist": {
-    "厳密一致": 5
+    "strict comparison": 5
    },
-   "canonical": "厳密一致"
+   "canonical": "strict comparison"
   },
   {
    "id": "neg_modulo",
-   "default": "python式(2)",
+   "default": "python-style (2)",
    "stability": 1.0,
    "dist": {
-    "python式(2)": 5
+    "python-style (2)": 5
    },
-   "canonical": "python式(2)"
+   "canonical": "python-style (2)"
   },
   {
    "id": "div_zero",
-   "default": "例外(ZeroDiv)",
+   "default": "raises (ZeroDiv)",
    "stability": 1.0,
    "dist": {
-    "例外(ZeroDiv)": 5
+    "raises (ZeroDiv)": 5
    },
-   "canonical": "例外(ZeroDiv)"
+   "canonical": "raises (ZeroDiv)"
   },
   {
    "id": "range_incl",
-   "default": "他([2, 3])",
+   "default": "other([2, 3])",
    "stability": 1.0,
    "dist": {
-    "他([2, 3])": 5
+    "other([2, 3])": 5
    },
-   "canonical": "他([2, 3])"
+   "canonical": "other([2, 3])"
   },
   {
    "id": "sort_case",
-   "default": "ASCII順",
+   "default": "ASCII order (uppercase first)",
    "stability": 1.0,
    "dist": {
-    "ASCII順": 5
+    "ASCII order (uppercase first)": 5
    },
-   "canonical": "ASCII順"
+   "canonical": "ASCII order (uppercase first)"
   },
   {
    "id": "split_multi",
@@ -120,38 +120,38 @@
    "stability": 0.4,
    "dist": {
     "EXEC_ERR:ModuleNotFoundError": 2,
-    "空白畳む": 2,
+    "collapses whitespace": 2,
     "ERR": 1
    },
    "canonical": "EXEC_ERR:ModuleNotFoundError"
   },
   {
    "id": "empty_split",
-   "default": "空リスト",
+   "default": "empty list",
    "stability": 1.0,
    "dist": {
-    "空リスト": 5
+    "empty list": 5
    },
-   "canonical": "空リスト"
+   "canonical": "empty list"
   },
   {
    "id": "missing_key",
-   "default": "None返す",
+   "default": "returns None",
    "stability": 1.0,
    "dist": {
-    "None返す": 5
+    "returns None": 5
    },
-   "canonical": "None返す"
+   "canonical": "returns None"
   },
   {
    "id": "flatten",
-   "default": "深く平坦化",
+   "default": "deep flatten",
    "stability": 0.8,
    "dist": {
-    "深く平坦化": 4,
+    "deep flatten": 4,
     "EXEC_ERR:SyntaxError": 1
    },
-   "canonical": "深く平坦化"
+   "canonical": "deep flatten"
   },
   {
    "id": "nth_index",
@@ -165,39 +165,39 @@
   },
   {
    "id": "none_input",
-   "default": "例外(TypeError)",
+   "default": "raises (TypeError)",
    "stability": 1.0,
    "dist": {
-    "例外(TypeError)": 5
+    "raises (TypeError)": 5
    },
-   "canonical": "例外(TypeError)"
+   "canonical": "raises (TypeError)"
   },
   {
    "id": "reverse_default",
-   "default": "昇順",
+   "default": "ascending",
    "stability": 1.0,
    "dist": {
-    "昇順": 5
+    "ascending": 5
    },
-   "canonical": "昇順"
+   "canonical": "ascending"
   },
   {
    "id": "title_case",
-   "default": "各語頭大文字",
+   "default": "capitalize each word",
    "stability": 1.0,
    "dist": {
-    "各語頭大文字": 5
+    "capitalize each word": 5
    },
-   "canonical": "各語頭大文字"
+   "canonical": "capitalize each word"
   },
   {
    "id": "clamp_pct",
-   "default": "0-100%表記",
+   "default": "0-100 scale",
    "stability": 1.0,
    "dist": {
-    "0-100%表記": 5
+    "0-100 scale": 5
    },
-   "canonical": "0-100%表記"
+   "canonical": "0-100 scale"
   },
   {
    "id": "int_div",
@@ -210,86 +210,86 @@
   },
   {
    "id": "slice_oob",
-   "default": "全件(クランプ)",
+   "default": "clamps (returns all)",
    "stability": 1.0,
    "dist": {
-    "全件(クランプ)": 5
+    "clamps (returns all)": 5
    },
-   "canonical": "全件(クランプ)"
+   "canonical": "clamps (returns all)"
   },
   {
    "id": "neg_index",
-   "default": "負index許容(末尾)",
+   "default": "negative index allowed (tail)",
    "stability": 1.0,
    "dist": {
-    "負index許容(末尾)": 5
+    "negative index allowed (tail)": 5
    },
-   "canonical": "負index許容(末尾)"
+   "canonical": "negative index allowed (tail)"
   },
   {
    "id": "strip_parse",
-   "default": "空白除去して解釈",
+   "default": "strips whitespace then parses",
    "stability": 1.0,
    "dist": {
-    "空白除去して解釈": 5
+    "strips whitespace then parses": 5
    },
-   "canonical": "空白除去して解釈"
+   "canonical": "strips whitespace then parses"
   },
   {
    "id": "bool_case",
-   "default": "大小無視でTrue",
+   "default": "case-insensitive True",
    "stability": 1.0,
    "dist": {
-    "大小無視でTrue": 5
+    "case-insensitive True": 5
    },
-   "canonical": "大小無視でTrue"
+   "canonical": "case-insensitive True"
   },
   {
    "id": "date_fmt",
-   "default": "他('2026/07/08')",
+   "default": "other('2026/07/08')",
    "stability": 1.0,
    "dist": {
-    "他('2026/07/08')": 5
+    "other('2026/07/08')": 5
    },
-   "canonical": "他('2026/07/08')"
+   "canonical": "other('2026/07/08')"
   },
   {
    "id": "round_ndigits",
-   "default": "小数2桁",
+   "default": "2 decimals",
    "stability": 1.0,
    "dist": {
-    "小数2桁": 5
+    "2 decimals": 5
    },
-   "canonical": "小数2桁"
+   "canonical": "2 decimals"
   },
   {
    "id": "max_empty",
-   "default": "例外(IndexError)",
+   "default": "raises (IndexError)",
    "stability": 0.8,
    "dist": {
-    "例外(IndexError)": 4,
-    "例外(ValueError)": 1
+    "raises (IndexError)": 4,
+    "raises (ValueError)": 1
    },
-   "canonical": "例外(IndexError)"
+   "canonical": "raises (IndexError)"
   },
   {
    "id": "dup_count",
-   "default": "重複した値の種類数(2)",
+   "default": "distinct duplicated values (2)",
    "stability": 1.0,
    "dist": {
-    "重複した値の種類数(2)": 5
+    "distinct duplicated values (2)": 5
    },
-   "canonical": "重複した値の種類数(2)"
+   "canonical": "distinct duplicated values (2)"
   },
   {
    "id": "capitalize_rest",
-   "default": "先頭のみ大文字化(残り保持)",
+   "default": "first letter only (rest kept)",
    "stability": 0.8,
    "dist": {
-    "先頭のみ大文字化(残り保持)": 4,
+    "first letter only (rest kept)": 4,
     "EXEC_ERR:IndentationError": 1
    },
-   "canonical": "先頭のみ大文字化(残り保持)"
+   "canonical": "first letter only (rest kept)"
   }
  ]
 }

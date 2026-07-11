@@ -8,24 +8,24 @@
  "rows": [
   {
    "id": "io_date_fmt",
-   "default": "ISO(0埋め)",
+   "default": "ISO (zero-padded)",
    "stability": 1.0,
    "n": 5,
    "dist": {
-    "ISO(0埋め)": 5
+    "ISO (zero-padded)": 5
    },
-   "canonical": "ISO(0埋め)"
+   "canonical": "ISO (zero-padded)"
   },
   {
    "id": "io_missing_field",
-   "default": "値を発明/他",
+   "default": "values invented/other",
    "stability": 0.73,
    "n": 15,
    "dist": {
-    "値を発明/他": 11,
-    "JSON不成立": 4
+    "values invented/other": 11,
+    "ERR:no-json": 4
    },
-   "canonical": "値を発明/他"
+   "canonical": "values invented/other"
   },
   {
    "id": "io_key_style",
@@ -40,13 +40,13 @@
   },
   {
    "id": "io_num_unit",
-   "default": "数値(単位なし)",
+   "default": "number (no unit)",
    "stability": 1.0,
    "n": 5,
    "dist": {
-    "数値(単位なし)": 5
+    "number (no unit)": 5
    },
-   "canonical": "数値(単位なし)"
+   "canonical": "number (no unit)"
   },
   {
    "id": "io_bool_style",
@@ -60,138 +60,138 @@
   },
   {
    "id": "io_pure_json",
-   "default": "説明文つき",
+   "default": "with prose",
    "stability": 1.0,
    "n": 5,
    "dist": {
-    "説明文つき": 5
+    "with prose": 5
    },
-   "canonical": "説明文つき"
+   "canonical": "with prose"
   },
   {
    "id": "io_extra_keys",
-   "default": "指定キーのみ",
+   "default": "specified key only",
    "stability": 1.0,
    "n": 5,
    "dist": {
-    "指定キーのみ": 5
+    "specified key only": 5
    },
-   "canonical": "指定キーのみ"
+   "canonical": "specified key only"
   },
   {
    "id": "io_date_ambig",
-   "default": "MM/DD解釈(1月2日)",
+   "default": "MM/DD (Jan 2)",
    "stability": 1.0,
    "n": 5,
    "dist": {
-    "MM/DD解釈(1月2日)": 5
+    "MM/DD (Jan 2)": 5
    },
-   "canonical": "MM/DD解釈(1月2日)"
+   "canonical": "MM/DD (Jan 2)"
   },
   {
    "id": "io_range_count",
-   "default": "下限(3)",
+   "default": "lower bound (3)",
    "stability": 1.0,
    "n": 5,
    "dist": {
-    "下限(3)": 5
+    "lower bound (3)": 5
    },
-   "canonical": "下限(3)"
+   "canonical": "lower bound (3)"
   },
   {
    "id": "io_csv_header",
-   "default": "ヘッダなし",
+   "default": "no header",
    "stability": 0.53,
    "n": 15,
    "dist": {
-    "ヘッダなし": 8,
-    "ヘッダあり": 7
+    "no header": 8,
+    "header row": 7
    },
-   "canonical": "ヘッダなし"
+   "canonical": "no header"
   },
   {
    "id": "txt_sum_lang",
-   "default": "入力言語(日本語)で応答",
+   "default": "input language (Japanese)",
    "stability": 1.0,
    "n": 5,
    "dist": {
-    "入力言語(日本語)で応答": 5
+    "input language (Japanese)": 5
    },
-   "canonical": "入力言語(日本語)で応答"
+   "canonical": "input language (Japanese)"
   },
   {
    "id": "txt_sum_format",
-   "default": "散文",
+   "default": "prose",
    "stability": 1.0,
    "n": 5,
    "dist": {
-    "散文": 5
+    "prose": 5
    },
-   "canonical": "散文"
+   "canonical": "prose"
   },
   {
    "id": "txt_sum_length",
-   "default": "短段落(240字未満)",
+   "default": "short paragraph (<240 chars)",
    "stability": 1.0,
    "n": 5,
    "dist": {
-    "短段落(240字未満)": 5
+    "short paragraph (<240 chars)": 5
    },
-   "canonical": "短段落(240字未満)"
+   "canonical": "short paragraph (<240 chars)"
   },
   {
    "id": "txt_tone",
-   "default": "敬語",
+   "default": "polite (keigo)",
    "stability": 1.0,
    "n": 5,
    "dist": {
-    "敬語": 5
+    "polite (keigo)": 5
    },
-   "canonical": "敬語"
+   "canonical": "polite (keigo)"
   },
   {
    "id": "txt_name_order",
-   "default": "姓-名(Yamada Taro)",
+   "default": "family-given (Yamada Taro)",
    "stability": 0.4,
    "n": 5,
    "dist": {
-    "姓-名(Yamada Taro)": 2,
-    "名-姓(Taro Yamada)": 2,
-    "他/ローマ字なし": 1
+    "family-given (Yamada Taro)": 2,
+    "given-family (Taro Yamada)": 2,
+    "other/no romaji": 1
    },
-   "canonical": "姓-名(Yamada Taro)"
+   "canonical": "family-given (Yamada Taro)"
   },
   {
    "id": "txt_units",
-   "default": "単位そのまま(ポンド)",
+   "default": "unit kept (pounds)",
    "stability": 1.0,
    "n": 5,
    "dist": {
-    "単位そのまま(ポンド)": 5
+    "unit kept (pounds)": 5
    },
-   "canonical": "単位そのまま(ポンド)"
+   "canonical": "unit kept (pounds)"
   },
   {
    "id": "txt_clarify",
-   "default": "手順/コマンドを答える",
+   "default": "gives instructions/commands",
    "stability": 0.67,
    "n": 15,
    "dist": {
-    "手順/コマンドを答える": 10,
-    "逆質問(不足を指摘)": 4,
-    "架空データで進める": 1
+    "gives instructions/commands": 10,
+    "asks back (points out missing input)": 4,
+    "fabricates data": 1
    },
-   "canonical": "手順/コマンドを答える"
+   "canonical": "gives instructions/commands"
   },
   {
    "id": "txt_list_style",
-   "default": "番号付き(1.)",
+   "default": "numbered (1.)",
    "stability": 1.0,
    "n": 5,
    "dist": {
-    "番号付き(1.)": 5
+    "numbered (1.)": 5
    },
-   "canonical": "番号付き(1.)"
+   "canonical": "numbered (1.)"
   }
  ]
 }

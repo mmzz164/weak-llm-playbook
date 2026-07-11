@@ -86,8 +86,9 @@ model_card.py profile_A.json ... [--glob 'profiles/profile_Qwen*.json'] [-o card
 - `kind: "code"` — 生成Python関数を実行: `cases` に `{"args": [...], "result": ...}` または
   `{"args": [...], "exception": true|"型名"}`。
 - `"builtin": "<probe_id>"` — 組み込み判断点を参照し、分類ロジックを共有したまま
-  プロンプト(`q`)だけ差し替える。`label_map` でラベル翻訳。`packs/code_en.json` は
-  この仕組みでコーディングバッテリー全点をJSONだけで英語化している。
+  プロンプト(`q`)だけ差し替える(`label_map` でラベルの読み替えも可能)。
+  `packs/code_en.json` はこの仕組みでコーディングバッテリー全点の英語プロンプト版を
+  JSONだけで実現している。ラベルは全バッテリー共通で英語。
 - `ERR` で始まるラベルは実装不能カテゴリに集計される。
 - 各プローブに `"tests": [{"input": "...", "expect": "ラベル"}]` を書くと `--validate` が
   オフラインで検証する(codeプローブの input はPythonソース文字列)。

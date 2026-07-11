@@ -99,8 +99,9 @@ Probe kinds:
 - `kind: "code"` — execute the generated Python function: `cases` of
   `{"args": [...], "result": ...}` or `{"args": [...], "exception": true|"TypeName"}`.
 - `"builtin": "<probe_id>"` — reference a built-in probe, sharing its classification
-  logic while swapping only the prompt (`q`); `label_map` translates labels. This is
-  how `packs/code_en.json` ports the whole coding battery in pure JSON.
+  logic while swapping only the prompt (`q`); `label_map` can remap labels if needed.
+  This is how `packs/code_en.json` ports the whole coding battery in pure JSON.
+  Labels are English across all batteries; only prompts differ by language.
 - Labels starting with `ERR` are counted in the not-implementable category.
 - `"tests": [{"input": "...", "expect": "label"}]` per probe — embedded self-tests,
   run offline by `--validate` (for code probes, `input` is Python source).

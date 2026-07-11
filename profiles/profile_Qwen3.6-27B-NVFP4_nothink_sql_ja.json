@@ -8,85 +8,85 @@
  "rows": [
   {
    "id": "sql_null_sort",
-   "default": "NULLが先頭(sqlite既定)",
+   "default": "NULLs first (sqlite default)",
    "stability": 1.0,
    "n": 5,
    "dist": {
-    "NULLが先頭(sqlite既定)": 5
+    "NULLs first (sqlite default)": 5
    },
-   "canonical": "NULLが先頭(sqlite既定)",
+   "canonical": "NULLs first (sqlite default)",
    "avg_out_toks": 13,
    "avg_sec": 0.47
   },
   {
    "id": "sql_top_ties",
-   "default": "LIMITで切る(同点の一方を落とす)",
+   "default": "LIMIT cuts a tie",
    "stability": 1.0,
    "n": 5,
    "dist": {
-    "LIMITで切る(同点の一方を落とす)": 5
+    "LIMIT cuts a tie": 5
    },
-   "canonical": "LIMITで切る(同点の一方を落とす)",
+   "canonical": "LIMIT cuts a tie",
    "avg_out_toks": 13,
    "avg_sec": 0.47
   },
   {
    "id": "sql_case_where",
-   "default": "大文字小文字を区別(0件)",
+   "default": "case-sensitive (0 rows)",
    "stability": 1.0,
    "n": 5,
    "dist": {
-    "大文字小文字を区別(0件)": 5
+    "case-sensitive (0 rows)": 5
    },
-   "canonical": "大文字小文字を区別(0件)",
+   "canonical": "case-sensitive (0 rows)",
    "avg_out_toks": 12,
    "avg_sec": 0.44
   },
   {
    "id": "sql_join_missing",
-   "default": "INNER(部署なし従業員を落とす)",
+   "default": "INNER (drops dept-less employee)",
    "stability": 1.0,
    "n": 5,
    "dist": {
-    "INNER(部署なし従業員を落とす)": 5
+    "INNER (drops dept-less employee)": 5
    },
-   "canonical": "INNER(部署なし従業員を落とす)",
+   "canonical": "INNER (drops dept-less employee)",
    "avg_out_toks": 27,
    "avg_sec": 0.92
   },
   {
    "id": "sql_empty_agg",
-   "default": "NULLを返す(SQL既定)",
+   "default": "returns NULL (SQL default)",
    "stability": 1.0,
    "n": 5,
    "dist": {
-    "NULLを返す(SQL既定)": 5
+    "returns NULL (SQL default)": 5
    },
-   "canonical": "NULLを返す(SQL既定)",
+   "canonical": "returns NULL (SQL default)",
    "avg_out_toks": 14,
    "avg_sec": 0.49
   },
   {
    "id": "sql_dup_output",
-   "default": "DISTINCT(重複除去)",
+   "default": "DISTINCT (dedup)",
    "stability": 1.0,
    "n": 5,
    "dist": {
-    "DISTINCT(重複除去)": 5
+    "DISTINCT (dedup)": 5
    },
-   "canonical": "DISTINCT(重複除去)",
+   "canonical": "DISTINCT (dedup)",
    "avg_out_toks": 7,
    "avg_sec": 0.28
   },
   {
    "id": "sql_order_unspec",
-   "default": "昇順",
+   "default": "ascending",
    "stability": 1.0,
    "n": 5,
    "dist": {
-    "昇順": 5
+    "ascending": 5
    },
-   "canonical": "昇順",
+   "canonical": "ascending",
    "avg_out_toks": 10,
    "avg_sec": 0.37
   }

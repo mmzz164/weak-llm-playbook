@@ -103,14 +103,14 @@ if args.kind == "json":
             continue
         if all(isinstance(o, dict) for o in outs):
             for key in sorted(set().union(*[set(o) for o in outs])):
-                vals = [canon(o[key]) if key in o else "(キーなし)" for o in outs]
+                vals = [canon(o[key]) if key in o else "(missing)" for o in outs]
                 c = Counter(vals)
                 (diverged if len(c) > 1 else consensus).append(
                     (i, label, key, c if len(c) > 1 else vals[0]))
         else:  # dict以外(配列等)は全体で比較
             c = Counter(canon(o) for o in outs)
             (diverged if len(c) > 1 else consensus).append(
-                (i, label, "(全体)", c if len(c) > 1 else canon(outs[0])))
+                (i, label, "(whole)", c if len(c) > 1 else canon(outs[0])))
 
     print("\n## [DIVERGED] spec holes — fields whose values differ across runs (must specify)")
     if not diverged:

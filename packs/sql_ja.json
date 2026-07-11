@@ -2,49 +2,106 @@
  "pack": "sql_ja",
  "description": "SQLドメイン判断点(日本語, SQLite実行)。生成SQLを :memory: のsqliteで実行し結果行で分類。NULLソート順・同点上位・大小文字照合・JOINの欠損行・空集合の集約・重複出力・並び順の既定を測る。エラー(方言前提等)は ERR:sql として実装不能カテゴリに集計。",
  "probes": [
-  {"id": "sql_null_sort", "kind": "sql",
+  {
+   "id": "sql_null_sort",
+   "kind": "sql",
    "q": "itemsテーブル(name TEXT, price INTEGER)を価格の安い順に並べ、nameだけを返すSQLite用SQLを書いてください。SQLのみ出力。",
    "setup": [
     "CREATE TABLE items(name TEXT, price INTEGER)",
     "INSERT INTO items VALUES ('a',300),('b',NULL),('c',100)"
    ],
    "classify": [
-    {"label": "NULLが先頭(sqlite既定)", "col0": ["b", "c", "a"]},
-    {"label": "NULLを末尾へ(明示処理)", "col0": ["c", "a", "b"]},
-    {"label": "NULL行を除外", "col0": ["c", "a"]}
+    {
+     "label": "NULLs first (sqlite default)",
+     "col0": [
+      "b",
+      "c",
+      "a"
+     ]
+    },
+    {
+     "label": "NULLs last (explicit handling)",
+     "col0": [
+      "c",
+      "a",
+      "b"
+     ]
+    },
+    {
+     "label": "NULL rows excluded",
+     "col0": [
+      "c",
+      "a"
+     ]
+    }
    ],
-   "fallback": "他",
+   "fallback": "other",
    "tests": [
-    {"input": "SELECT name FROM items ORDER BY price", "expect": "NULLが先頭(sqlite既定)"},
-    {"input": "SELECT name FROM items ORDER BY price NULLS LAST", "expect": "NULLを末尾へ(明示処理)"},
-    {"input": "SELECT TOP 3 name FROM items", "expect": "ERR:sql(OperationalError)"}
-   ]},
-
-  {"id": "sql_top_ties", "kind": "sql",
+    {
+     "input": "SELECT name FROM items ORDER BY price",
+     "expect": "NULLs first (sqlite default)"
+    },
+    {
+     "input": "SELECT name FROM items ORDER BY price NULLS LAST",
+     "expect": "NULLs last (explicit handling)"
+    },
+    {
+     "input": "SELECT TOP 3 name FROM items",
+     "expect": "ERR:sql(OperationalError)"
+    }
+   ]
+  },
+  {
+   "id": "sql_top_ties",
+   "kind": "sql",
    "q": "scoresテーブル(name TEXT, score INTEGER)から得点上位2件の名前を返すSQLite用SQLを書いてください。SQLのみ出力。",
    "setup": [
     "CREATE TABLE scores(name TEXT, score INTEGER)",
     "INSERT INTO scores VALUES ('a',90),('b',80),('c',80),('d',70)"
    ],
    "classify": [
-    {"label": "LIMITで切る(同点の一方を落とす)", "row_count": 2},
-    {"label": "同点を含める(3件)", "row_count": 3}
+    {
+     "label": "LIMIT cuts a tie",
+     "row_count": 2
+    },
+    {
+     "label": "ties included (3 rows)",
+     "row_count": 3
+    }
    ],
-   "fallback": "他"},
-
-  {"id": "sql_case_where", "kind": "sql",
+   "fallback": "other"
+  },
+  {
+   "id": "sql_case_where",
+   "kind": "sql",
    "q": "usersテーブル(name TEXT)から名前が alice の行数を返すSQLite用SQLを書いてください。SQLのみ出力。",
    "setup": [
     "CREATE TABLE users(name TEXT)",
     "INSERT INTO users VALUES ('Alice'),('bob')"
    ],
    "classify": [
-    {"label": "大文字小文字を区別(0件)", "rows": [[0]]},
-    {"label": "大小無視で照合(1件)", "rows": [[1]]}
+    {
+     "label": "case-sensitive (0 rows)",
+     "rows": [
+      [
+       0
+      ]
+     ]
+    },
+    {
+     "label": "case-insensitive match (1 row)",
+     "rows": [
+      [
+       1
+      ]
+     ]
+    }
    ],
-   "fallback": "他"},
-
-  {"id": "sql_join_missing", "kind": "sql",
+   "fallback": "other"
+  },
+  {
+   "id": "sql_join_missing",
+   "kind": "sql",
    "q": "empテーブル(name TEXT, dept_id INTEGER)とdeptテーブル(id INTEGER, dname TEXT)から、従業員のnameと所属部署名の一覧を返すSQLite用SQLを書いてください。SQLのみ出力。",
    "setup": [
     "CREATE TABLE emp(name TEXT, dept_id INTEGER)",
@@ -53,46 +110,96 @@
     "INSERT INTO dept VALUES (1,'sales')"
    ],
    "classify": [
-    {"label": "INNER(部署なし従業員を落とす)", "row_count": 1},
-    {"label": "LEFT(NULLで残す)", "row_count": 2}
+    {
+     "label": "INNER (drops dept-less employee)",
+     "row_count": 1
+    },
+    {
+     "label": "LEFT (keeps with NULL)",
+     "row_count": 2
+    }
    ],
-   "fallback": "他"},
-
-  {"id": "sql_empty_agg", "kind": "sql",
+   "fallback": "other"
+  },
+  {
+   "id": "sql_empty_agg",
+   "kind": "sql",
    "q": "prodsテーブル(name TEXT, price INTEGER, stock INTEGER)で、在庫が1以上の商品の最高価格を返すSQLite用SQLを書いてください。SQLのみ出力。",
    "setup": [
     "CREATE TABLE prods(name TEXT, price INTEGER, stock INTEGER)",
     "INSERT INTO prods VALUES ('x',100,0)"
    ],
    "classify": [
-    {"label": "NULLを返す(SQL既定)", "rows": [[null]]},
-    {"label": "0に置換(COALESCE等)", "rows": [[0]]},
-    {"label": "行なし", "row_count": 0}
+    {
+     "label": "returns NULL (SQL default)",
+     "rows": [
+      [
+       null
+      ]
+     ]
+    },
+    {
+     "label": "coalesced to 0",
+     "rows": [
+      [
+       0
+      ]
+     ]
+    },
+    {
+     "label": "no rows",
+     "row_count": 0
+    }
    ],
-   "fallback": "他"},
-
-  {"id": "sql_dup_output", "kind": "sql",
+   "fallback": "other"
+  },
+  {
+   "id": "sql_dup_output",
+   "kind": "sql",
    "q": "purchasesテーブル(buyer TEXT, item TEXT)から購入者の名前の一覧を返すSQLite用SQLを書いてください。SQLのみ出力。",
    "setup": [
     "CREATE TABLE purchases(buyer TEXT, item TEXT)",
     "INSERT INTO purchases VALUES ('a','x'),('a','y'),('b','x')"
    ],
    "classify": [
-    {"label": "DISTINCT(重複除去)", "row_count": 2},
-    {"label": "重複そのまま", "row_count": 3}
+    {
+     "label": "DISTINCT (dedup)",
+     "row_count": 2
+    },
+    {
+     "label": "duplicates kept",
+     "row_count": 3
+    }
    ],
-   "fallback": "他"},
-
-  {"id": "sql_order_unspec", "kind": "sql",
+   "fallback": "other"
+  },
+  {
+   "id": "sql_order_unspec",
+   "kind": "sql",
    "q": "tテーブル(name TEXT)の名前を並べ替えて返すSQLite用SQLを書いてください。SQLのみ出力。",
    "setup": [
     "CREATE TABLE t(name TEXT)",
     "INSERT INTO t VALUES ('b'),('a'),('c')"
    ],
    "classify": [
-    {"label": "昇順", "col0": ["a", "b", "c"]},
-    {"label": "降順", "col0": ["c", "b", "a"]}
+    {
+     "label": "ascending",
+     "col0": [
+      "a",
+      "b",
+      "c"
+     ]
+    },
+    {
+     "label": "descending",
+     "col0": [
+      "c",
+      "b",
+      "a"
+     ]
+    }
    ],
-   "fallback": "他"}
+   "fallback": "other"
+  }
  ]
 }

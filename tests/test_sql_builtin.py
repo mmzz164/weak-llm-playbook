@@ -28,16 +28,16 @@ chk("inst_len", (n1, len(p1)), ("inst_ja", 9))
 chk("sql_len", (n2, len(p2)), ("sql_ja", 7))
 P1 = {p["id"]: p for p in p1}
 P2 = {p["id"]: p for p in p2}
-chk("neg_break", P1["meta_negation"]["classify"]("def dedup(l):\n    return list(set(l))"), "禁止を破る(set使用)")
-chk("done_ok", P1["meta_contract_done"]["classify"]("2"), "契約遵守(2のみ)")
-chk("steps_4", P1["meta_steps_exact"]["classify"]("1. 湯を沸かす\n2. 茶葉を入れる\n3. 注ぐ\n4. 待つ"), "ちょうど4項目(遵守)")
-chk("steps_5", P1["meta_steps_exact"]["classify"]("1. a\n2. b\n3. c\n4. d\n5. e"), "項目数違反(5以上)")
-chk("p_null_first", P2["sql_null_sort"]["classify"]("SELECT name FROM items ORDER BY price"), "NULLが先頭(sqlite既定)")
-chk("p_ties_limit", P2["sql_top_ties"]["classify"]("SELECT name FROM scores ORDER BY score DESC LIMIT 2"), "LIMITで切る(同点の一方を落とす)")
-chk("p_case_lower", P2["sql_case_where"]["classify"]("SELECT COUNT(*) FROM users WHERE LOWER(name) = 'alice'"), "大小無視で照合(1件)")
-chk("p_join_left", P2["sql_join_missing"]["classify"]("SELECT e.name, d.dname FROM emp e LEFT JOIN dept d ON e.dept_id = d.id"), "LEFT(NULLで残す)")
-chk("p_agg_null", P2["sql_empty_agg"]["classify"]("SELECT MAX(price) FROM prods WHERE stock >= 1"), "NULLを返す(SQL既定)")
-chk("p_dup_distinct", P2["sql_dup_output"]["classify"]("SELECT DISTINCT buyer FROM purchases"), "DISTINCT(重複除去)")
+chk("neg_break", P1["meta_negation"]["classify"]("def dedup(l):\n    return list(set(l))"), "violates prohibition (uses set)")
+chk("done_ok", P1["meta_contract_done"]["classify"]("2"), "contract honored (bare 2)")
+chk("steps_4", P1["meta_steps_exact"]["classify"]("1. 湯を沸かす\n2. 茶葉を入れる\n3. 注ぐ\n4. 待つ"), "exactly 4 items (honored)")
+chk("steps_5", P1["meta_steps_exact"]["classify"]("1. a\n2. b\n3. c\n4. d\n5. e"), "count violated (5+)")
+chk("p_null_first", P2["sql_null_sort"]["classify"]("SELECT name FROM items ORDER BY price"), "NULLs first (sqlite default)")
+chk("p_ties_limit", P2["sql_top_ties"]["classify"]("SELECT name FROM scores ORDER BY score DESC LIMIT 2"), "LIMIT cuts a tie")
+chk("p_case_lower", P2["sql_case_where"]["classify"]("SELECT COUNT(*) FROM users WHERE LOWER(name) = 'alice'"), "case-insensitive match (1 row)")
+chk("p_join_left", P2["sql_join_missing"]["classify"]("SELECT e.name, d.dname FROM emp e LEFT JOIN dept d ON e.dept_id = d.id"), "LEFT (keeps with NULL)")
+chk("p_agg_null", P2["sql_empty_agg"]["classify"]("SELECT MAX(price) FROM prods WHERE stock >= 1"), "returns NULL (SQL default)")
+chk("p_dup_distinct", P2["sql_dup_output"]["classify"]("SELECT DISTINCT buyer FROM purchases"), "DISTINCT (dedup)")
 
 # --- code_en: builtin参照 + label_map + code_suffix ---
 n3, p3 = dp.load_pack(str(PACKS / "code_en.json"))
@@ -56,7 +56,7 @@ def raises_keyerror(d, k):
 chk("lm_keyerror", P3["missing_key"]["classify"](raises_keyerror), "raises (KeyError)")
 chk("lm_none", P3["missing_key"]["classify"](lambda d, k: d.get(k)), "returns None")
 chk("lm_range_incl", P3["range_incl"]["classify"](lambda a, b: list(range(a, b + 1))), "end inclusive")
-chk("lm_dynamic_passthru", P3["missing_key"]["classify"](lambda d, k: 99), "他(99)")
+chk("lm_dynamic_passthru", P3["missing_key"]["classify"](lambda d, k: 99), "other(99)")
 
 # --- inst_en / sql_en ---
 n4, p4 = dp.load_pack(str(PACKS / "inst_en.json"))

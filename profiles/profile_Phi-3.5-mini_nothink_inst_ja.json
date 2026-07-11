@@ -8,111 +8,111 @@
  "rows": [
   {
    "id": "meta_negation",
-   "default": "禁止を守る",
+   "default": "honors prohibition",
    "stability": 0.6,
    "n": 15,
    "dist": {
-    "禁止を守る": 9,
-    "禁止を破る(set使用)": 6
+    "honors prohibition": 9,
+    "violates prohibition (uses set)": 6
    },
-   "canonical": "禁止を守る",
+   "canonical": "honors prohibition",
    "avg_out_toks": 268,
    "avg_sec": 6.31
   },
   {
    "id": "meta_contract_done",
-   "default": "契約遵守(2のみ)",
+   "default": "contract honored (bare 2)",
    "stability": 1.0,
    "n": 5,
    "dist": {
-    "契約遵守(2のみ)": 5
+    "contract honored (bare 2)": 5
    },
-   "canonical": "契約遵守(2のみ)",
+   "canonical": "contract honored (bare 2)",
    "avg_out_toks": 3,
    "avg_sec": 0.1
   },
   {
    "id": "meta_conflict_order",
-   "default": "後の指示に従う(1文)",
+   "default": "follows later instruction (one sentence)",
    "stability": 1.0,
    "n": 5,
    "dist": {
-    "後の指示に従う(1文)": 5
+    "follows later instruction (one sentence)": 5
    },
-   "canonical": "後の指示に従う(1文)",
+   "canonical": "follows later instruction (one sentence)",
    "avg_out_toks": 80,
    "avg_sec": 1.98
   },
   {
    "id": "meta_late_constraint",
-   "default": "制約無視(日本語で応答)",
+   "default": "constraint ignored (responds in Japanese)",
    "stability": 1.0,
    "n": 5,
    "dist": {
-    "制約無視(日本語で応答)": 5
+    "constraint ignored (responds in Japanese)": 5
    },
-   "canonical": "制約無視(日本語で応答)",
+   "canonical": "constraint ignored (responds in Japanese)",
    "avg_out_toks": 88,
    "avg_sec": 2.02
   },
   {
    "id": "meta_early_constraint",
-   "default": "制約無視(日本語で応答)",
+   "default": "constraint ignored (responds in Japanese)",
    "stability": 1.0,
    "n": 5,
    "dist": {
-    "制約無視(日本語で応答)": 5
+    "constraint ignored (responds in Japanese)": 5
    },
-   "canonical": "制約無視(日本語で応答)",
+   "canonical": "constraint ignored (responds in Japanese)",
    "avg_out_toks": 88,
    "avg_sec": 2.08
   },
   {
    "id": "meta_length_limit",
-   "default": "軽微超過(〜99字)",
+   "default": "slightly over (<=99 chars)",
    "stability": 0.86,
    "n": 7,
    "dist": {
-    "軽微超過(〜99字)": 6,
-    "制限遵守(〜55字)": 1
+    "slightly over (<=99 chars)": 6,
+    "limit honored (<=55 chars)": 1
    },
-   "canonical": "軽微超過(〜99字)",
+   "canonical": "slightly over (<=99 chars)",
    "avg_out_toks": 89,
    "avg_sec": 2.09
   },
   {
    "id": "meta_forbidden_word",
-   "default": "禁止を守る",
+   "default": "honors prohibition",
    "stability": 1.0,
    "n": 5,
    "dist": {
-    "禁止を守る": 5
+    "honors prohibition": 5
    },
-   "canonical": "禁止を守る",
+   "canonical": "honors prohibition",
    "avg_out_toks": 200,
    "avg_sec": 4.68
   },
   {
    "id": "meta_steps_exact",
-   "default": "ちょうど4項目(遵守)",
+   "default": "exactly 4 items (honored)",
    "stability": 1.0,
    "n": 5,
    "dist": {
-    "ちょうど4項目(遵守)": 5
+    "exactly 4 items (honored)": 5
    },
-   "canonical": "ちょうど4項目(遵守)",
+   "canonical": "exactly 4 items (honored)",
    "avg_out_toks": 121,
    "avg_sec": 2.83
   },
   {
    "id": "meta_dont_explain",
-   "default": "コードのみ(遵守)",
+   "default": "code only (honored)",
    "stability": 1.0,
    "n": 5,
    "dist": {
-    "コードのみ(遵守)": 5
+    "code only (honored)": 5
    },
-   "canonical": "コードのみ(遵守)",
+   "canonical": "code only (honored)",
    "avg_out_toks": 19,
    "avg_sec": 0.46
   }

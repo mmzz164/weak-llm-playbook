@@ -8,49 +8,49 @@
  "rows": [
   {
    "id": "sql_null_sort",
-   "default": "NULLが先頭(sqlite既定)",
+   "default": "NULLs first (sqlite default)",
    "stability": 1.0,
    "n": 5,
    "dist": {
-    "NULLが先頭(sqlite既定)": 5
+    "NULLs first (sqlite default)": 5
    },
-   "canonical": "NULLが先頭(sqlite既定)",
+   "canonical": "NULLs first (sqlite default)",
    "avg_out_toks": 10,
    "avg_sec": 0.27
   },
   {
    "id": "sql_top_ties",
-   "default": "LIMITで切る(同点の一方を落とす)",
+   "default": "LIMIT cuts a tie",
    "stability": 1.0,
    "n": 5,
    "dist": {
-    "LIMITで切る(同点の一方を落とす)": 5
+    "LIMIT cuts a tie": 5
    },
-   "canonical": "LIMITで切る(同点の一方を落とす)",
+   "canonical": "LIMIT cuts a tie",
    "avg_out_toks": 101,
    "avg_sec": 2.42
   },
   {
    "id": "sql_case_where",
-   "default": "大文字小文字を区別(0件)",
+   "default": "case-sensitive (0 rows)",
    "stability": 1.0,
    "n": 5,
    "dist": {
-    "大文字小文字を区別(0件)": 5
+    "case-sensitive (0 rows)": 5
    },
-   "canonical": "大文字小文字を区別(0件)",
+   "canonical": "case-sensitive (0 rows)",
    "avg_out_toks": 18,
    "avg_sec": 0.43
   },
   {
    "id": "sql_join_missing",
-   "default": "INNER(部署なし従業員を落とす)",
+   "default": "INNER (drops dept-less employee)",
    "stability": 1.0,
    "n": 5,
    "dist": {
-    "INNER(部署なし従業員を落とす)": 5
+    "INNER (drops dept-less employee)": 5
    },
-   "canonical": "INNER(部署なし従業員を落とす)",
+   "canonical": "INNER (drops dept-less employee)",
    "avg_out_toks": 32,
    "avg_sec": 0.76
   },
@@ -68,13 +68,13 @@
   },
   {
    "id": "sql_dup_output",
-   "default": "重複そのまま",
+   "default": "duplicates kept",
    "stability": 1.0,
    "n": 5,
    "dist": {
-    "重複そのまま": 5
+    "duplicates kept": 5
    },
-   "canonical": "重複そのまま",
+   "canonical": "duplicates kept",
    "avg_out_toks": 10,
    "avg_sec": 0.25
   },
@@ -85,7 +85,7 @@
    "n": 7,
    "dist": {
     "ERR:sql(OperationalError)": 6,
-    "昇順": 1
+    "ascending": 1
    },
    "canonical": "ERR:sql(OperationalError)",
    "avg_out_toks": 136,

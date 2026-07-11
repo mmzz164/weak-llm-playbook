@@ -213,13 +213,13 @@
   },
   {
    "id": "none_input",
-   "default": "例外(TypeError)",
+   "default": "raises (TypeError)",
    "stability": 1.0,
    "n": 5,
    "dist": {
-    "例外(TypeError)": 5
+    "raises (TypeError)": 5
    },
-   "canonical": "例外(TypeError)",
+   "canonical": "raises (TypeError)",
    "avg_out_toks": 17,
    "avg_sec": 0.6
   },
@@ -345,25 +345,25 @@
   },
   {
    "id": "max_empty",
-   "default": "例外(ValueError)",
+   "default": "raises (ValueError)",
    "stability": 1.0,
    "n": 5,
    "dist": {
-    "例外(ValueError)": 5
+    "raises (ValueError)": 5
    },
-   "canonical": "例外(ValueError)",
+   "canonical": "raises (ValueError)",
    "avg_out_toks": 16,
    "avg_sec": 0.56
   },
   {
    "id": "dup_count",
-   "default": "他(5)",
+   "default": "other(5)",
    "stability": 1.0,
    "n": 5,
    "dist": {
-    "他(5)": 5
+    "other(5)": 5
    },
-   "canonical": "他(5)",
+   "canonical": "other(5)",
    "avg_out_toks": 41,
    "avg_sec": 1.36
   },
