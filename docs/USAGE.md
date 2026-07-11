@@ -194,6 +194,12 @@ task K times, and compares the JSON results field-by-field under the compare
 policy — spec_holes for agent tasks: divergence = a hole in your instruction.
 Raw transcripts and `result<i>.json` artifacts are kept per run.
 
+`--fix [OUT.txt]` closes the loop like spec_holes: it writes a revised task with
+every diverging behavior pinned (scalars and counts pinned to the majority;
+data-dependent lineups become explicit FILL-IN lines for you, since concrete
+IDs cannot be pinned in a reusable task), then re-probes the revised task
+(K more runs) and reports holes before → after.
+
 ## model_card.py — delegation-guide generator
 
 ```

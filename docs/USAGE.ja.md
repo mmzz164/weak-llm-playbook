@@ -162,6 +162,11 @@ run_agent.py task.txt [--cmd "claude-local"] [--allowed mcp__server__*]
 K回実行、結果JSONを比較ポリシー付きでフィールド比較する——エージェントタスク版の
 spec_holes(発散=指示の穴)。各runの生ログと `result<i>.json` を成果物として保存。
 
+`--fix [OUT.txt]` は spec_holes と同じ体験でループを閉じる: 発散した挙動をピン留めした
+改訂版タスクを書き出し(スカラー・件数は多数派で自動ピン。顔ぶれの割れはIDを固定しても
+使い回せないので「★要記入」行=並び順・範囲・フィルタを書く欄になる)、それをK回
+再測定して穴の before → after を報告する。
+
 ## model_card.py — 委譲ガイド生成器
 
 ```
