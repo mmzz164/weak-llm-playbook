@@ -252,10 +252,10 @@ def main():
             else:
                 print("!! the model returned empty text (a thinking-mode model may have "
                       "spent the whole budget thinking)")
-            print("!! hints: a thinking model (e.g. qwen3 on ollama) may spend the whole "
-                  "budget thinking — add '/no_think' to your instruction or use a "
-                  "non-thinking model; or pick a model with --model NAME; "
-                  "or supply inputs.json yourself")
+            print("!! hints: a thinking model may have spent the whole budget thinking. "
+                  "Disabling it is model/server-specific (Qwen: append /no_think; "
+                  "ollama: think=false or pull a non-thinking variant). "
+                  "Or pick another model with --model NAME, or supply inputs.json yourself.")
             sys.exit(2)
         inputs_path = root + ".inputs.json"
         json.dump(cand, open(inputs_path, "w"), ensure_ascii=False)
