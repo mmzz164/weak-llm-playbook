@@ -32,6 +32,7 @@ python3 demo/demo.py
 (vLLM / llama.cpp / ollama / OpenAI API)とAnthropic APIに対応。
 
 ```bash
+# どのサーバーを使うかは明示する(必須——無言の自動探索はしない):
 export PROBE_BASE=http://localhost:8000       # ollamaなら http://localhost:11434
 
 # ワンコマンド。指示をそのまま渡す(ファイルパスでも可):

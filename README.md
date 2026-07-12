@@ -38,6 +38,7 @@ OpenAI-compatible endpoint (vLLM / llama.cpp / ollama / OpenAI API) or the
 Anthropic API.
 
 ```bash
+# tell the tools which server to use (required — no silent auto-discovery):
 export PROBE_BASE=http://localhost:8000       # ollama: http://localhost:11434
 
 # One command. Hand it your instruction — the text itself (or a file path):
