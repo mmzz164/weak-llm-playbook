@@ -46,6 +46,22 @@ def find_json(text):
     return None
 
 
+def _strip_think(text):
+    """qwen3等の思考ブロックを除去する。閉じていない(=max_tokensで切断された)思考は
+    末尾まで落とす。全ツールの出力パースをollama等の思考モデルに対して頑健にする。"""
+    t = _re.sub(r"<think>.*?</think>\s*", "", text, flags=_re.S)
+    i = t.find("<think>")
+    return t[:i] if i >= 0 else t
+
+
+def _order_models(models):
+    """chat向きを先頭へ(embedding系を後ろへ)。ollamaはpull済み全モデルを列挙するため、
+    先頭が会話不能なモデルだと自動検出が事故る。元の順序は安定に保つ。"""
+    chat = [m for m in models if "embed" not in m.lower()]
+    rest = [m for m in models if "embed" in m.lower()]
+    return chat + rest
+
+
 def detect_model(base, key=None):
     """GET {base}/v1/models で配信中モデルのID一覧を返す(OpenAI互換サーバー用)。
     vLLM/llama.cpp/ollama は単一〜少数モデルなので、呼び出し側は先頭を既定に使える。"""
@@ -60,7 +76,7 @@ def detect_model(base, key=None):
         raise RuntimeError(f"model auto-detection failed ({base}/v1/models): {e}. Specify the model explicitly") from e
     if not models:
         raise RuntimeError(f"{base}/v1/models returned no models. Specify the model explicitly")
-    return models
+    return _order_models(models)
 
 
 class LLMClient:
@@ -90,7 +106,7 @@ class LLMClient:
     def _finish_openai(self, r):
         u = r.get("usage") or {}
         self.last_usage = {"in": u.get("prompt_tokens"), "out": u.get("completion_tokens")}
-        return r["choices"][0]["message"].get("content") or ""
+        return _strip_think(r["choices"][0]["message"].get("content") or "")
 
     def _openai(self, prompt, temperature, max_tokens):
         headers = {"Authorization": f"Bearer {self.key}"} if self.key else {}

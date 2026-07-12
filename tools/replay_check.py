@@ -144,7 +144,7 @@ def main():
                       if ja else
                       "\nOutput only a minimal implementation using the standard library. "
                       "No explanations, tests, or type checks.")
-            code = extract_code(gen(task + suffix, temp, 1200))
+            code = extract_code(gen(task + suffix, temp, 2000))
             f, err = load_fn(code, fn)
             if f is None:
                 print(f"attempt {attempt}: implementation did not load ({err})")
@@ -161,7 +161,7 @@ def main():
             docs = {}
             for e in expected:
                 docs.setdefault(e["input"], e["doc"])
-            outs = {i: find_json(gen(task + sep + doc, temp, 800))
+            outs = {i: find_json(gen(task + sep + doc, temp, 1200))
                     for i, doc in sorted(docs.items())}
             mism = verify_json_outputs(outs, expected, table.get("policy"))
             if not mism:

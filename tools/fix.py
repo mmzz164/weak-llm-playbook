@@ -122,7 +122,8 @@ def run_tool(script, *a):
 
 
 def gen_code_inputs(client, task):
-    """コードタスクのプローブ入力をLLMに1回分ずつ書かせる(有界・パース失敗は再試行)。"""
+    """コードタスクのプローブ入力をLLMに書かせる(有界3回)。
+    (入力リスト or None, 最後の生応答) を返す——失敗時の診断表示用。"""
     ja = has_ja(task)
     p = task + ("\n\nこの仕様の関数に対して、境界・空・同点・0・負数を突くテスト入力"
                 "(引数の組)を6個、JSON配列の配列だけで出力してください。"
@@ -130,8 +131,9 @@ def gen_code_inputs(client, task):
                 "\n\nFor the function in this spec, output 6 test inputs (argument tuples) "
                 "probing boundaries, empty, ties, zero and negatives, as a JSON array of "
                 "arrays only. Example: [[[3,1,2],2],[[],0]]. No code or prose, JSON only.")
+    raw = ""
     for t in (0.0, 0.5, 0.9):
-        raw = client.chat(p, temperature=t, max_tokens=400)
+        raw = client.chat(p, temperature=t, max_tokens=1000)
         m = re.search(r"\[\s*\[.*\]\s*\]", raw, re.S)
         if not m:
             continue
@@ -140,8 +142,8 @@ def gen_code_inputs(client, task):
         except ValueError:
             continue
         if isinstance(cand, list) and cand and all(isinstance(x, list) for x in cand):
-            return cand
-    return None
+            return cand, raw
+    return None, raw
 
 
 def clean_inputs(data, kind):
@@ -248,11 +250,18 @@ def main():
         sys.exit(2)
     if not inputs_path:
         model = args.model or detect_model(base, args.key)[0]
+        print(f"[model] {model}")
         client = LLMClient(model, base, api=args.api, key=args.key, think=False)
-        cand = gen_code_inputs(client, draft)
+        cand, last_raw = gen_code_inputs(client, draft)
         if cand is None:
-            print("!! could not obtain probe inputs from the model (3 attempts); "
-                  "supply inputs.json manually")
+            print("!! could not obtain probe inputs from the model (3 attempts)")
+            if last_raw.strip():
+                print(f"!! last response was: {last_raw.strip()[:200]!r}")
+            else:
+                print("!! the model returned empty text (a thinking-mode model may have "
+                      "spent the whole budget thinking)")
+            print("!! hints: choose a chat model explicitly with --model NAME "
+                  "(see GET /v1/models), or supply inputs.json yourself")
             sys.exit(2)
         inputs_path = root + ".inputs.json"
         json.dump(cand, open(inputs_path, "w"), ensure_ascii=False)

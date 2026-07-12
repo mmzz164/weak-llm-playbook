@@ -56,10 +56,12 @@ class FakeClient:
 
 
 good = FakeClient(['no json here', '[[[3,1,2],2],[[],0]]'])
-chk("gen retries then parses", sf.gen_code_inputs(good, "implement f"),
+chk("gen retries then parses", sf.gen_code_inputs(good, "implement f")[0],
     [[[3, 1, 2], 2], [[], 0]])
 bad = FakeClient(["nope", "still nope", "```code```"])
-chk("gen gives up after 3", sf.gen_code_inputs(bad, "implement f"), None)
+cand, last_raw = sf.gen_code_inputs(bad, "implement f")
+chk("gen gives up after 3", cand, None)
+chk("gen keeps last raw for diagnostics", last_raw, "```code```")
 
 # ---- run_agent: ポリシー付きK回比較
 POL = {"results": "count", "count": "exact", "not_found": "exact", "notes": "free"}

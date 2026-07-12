@@ -135,7 +135,7 @@ def probe_json(task, texts, K, policy=None):
     for doc in texts:
         outs = []
         for k in range(K):
-            raw = gen(task + sep + doc, 0.0 if k == 0 else 0.7, max_tokens=800)
+            raw = gen(task + sep + doc, 0.0 if k == 0 else 0.7, max_tokens=1200)
             j = find_json(raw)
             total += 1
             if j is None:
@@ -213,7 +213,7 @@ def collect_inputs(task, fn_name, inputs_file):
     n0 = len(inputs)
     for t in (0.3, 0.9):
         try:
-            raw = gen(args_prompt, t, max_tokens=400)
+            raw = gen(args_prompt, t, max_tokens=1000)
             m = re.search(r"\[\s*\[.*?\]\s*\]", raw, re.S)
             cand = json.loads(m.group(0))
             if not (isinstance(cand, list) and all(isinstance(a, list) for a in cand)):
@@ -243,7 +243,7 @@ def probe_code(task, fn_name, inputs, K):
     while len(impls) < K and attempts < K * 3:
         temp = 0.0 if attempts == 0 else 0.7
         attempts += 1
-        code = extract_code(gen(task + suffix, temp, max_tokens=1200))
+        code = extract_code(gen(task + suffix, temp, max_tokens=2000))
         f, err = load_fn(code, fn_name)
         if f is None:
             broken += 1
