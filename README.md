@@ -40,19 +40,18 @@ Anthropic API.
 ```bash
 export PROBE_BASE=http://localhost:8000       # ollama: http://localhost:11434
 
-# One command. Write your instruction in a file, the way you'd naturally
-# write it, then:
-python3 tools/fix.py draft.txt
+# One command. Hand it your instruction — the text itself (or a file path):
+python3 tools/fix.py "Implement top_n(items, n): return the top n items"
 #   -> it finds what you forgot to specify, pins it, and hands back a fixed
-#      prompt verified to behave the same on every run. You review the
-#      PINNED lines. That's the whole workflow.
+#      prompt verified to behave the same on every run (full text printed,
+#      ready to copy). You review the PINNED lines. That's the whole workflow.
 
 # Add --run to also execute the fixed prompt and return a verified result:
-python3 tools/fix.py draft.txt --run
+python3 tools/fix.py "..." --run
 
 # Working on documents (extract fields / review a page / classify)?
 # Pass them along as a JSON array of strings:
-python3 tools/fix.py draft.txt documents.json --run
+python3 tools/fix.py "extract customer and quantity" documents.json --run
 
 # Tasks that need external tools (search a tracker through MCP, ...) are
 # auto-routed to disposable agent sessions — needs an agent CLI like `claude`.

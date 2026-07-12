@@ -34,17 +34,18 @@ python3 demo/demo.py
 ```bash
 export PROBE_BASE=http://localhost:8000       # ollamaなら http://localhost:11434
 
-# ワンコマンド。指示を普通の言葉でファイルに書いて:
-python3 tools/fix.py draft.txt
+# ワンコマンド。指示をそのまま渡す(ファイルパスでも可):
+python3 tools/fix.py "リストの上位n件を返す関数 top_n(items, n) を書いて"
 #   → 書き忘れを見つけ、確定させ、「何回実行しても同じ挙動」を検証済みの
-#     修正版プロンプトを返す。あなたは PINNED の行を眺めるだけ。以上が全工程。
+#     修正版プロンプトを返す(全文がそのままコピーできる形で表示される)。
+#     あなたは PINNED の行を眺めるだけ。以上が全工程。
 
 # --run を付ければ実行までして、検証済みの結果を返す:
-python3 tools/fix.py draft.txt --run
+python3 tools/fix.py "..." --run
 
 # 文書が対象のタスク(フィールド抽出・ページのレビュー・分類)?
 # 対象文書を文字列の配列(JSON)で一緒に渡すだけ:
-python3 tools/fix.py draft.txt documents.json --run
+python3 tools/fix.py "顧客名と数量を抽出して" documents.json --run
 
 # 外部ツールが要るタスク(MCPでトラッカー検索など)は自動で使い捨ての
 # エージェントセッションに転送される — `claude` などのエージェントCLIが必要。

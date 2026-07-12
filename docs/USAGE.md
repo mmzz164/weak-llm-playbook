@@ -165,7 +165,7 @@ file into `contracts/`; no code changes needed.
 ## fix.py — the whole pipeline as one command
 
 ```
-fix.py draft.txt [inputs.json] [URL] [--run] [-k K]
+fix.py <draft.txt | "instruction text"> [inputs.json] [URL] [--run] [-k K]
 ```
 
 Drives the full self-fix procedure as code: endpoint discovery ($PROBE_BASE,
@@ -182,7 +182,7 @@ instructions, but these steps are not its to execute — that is the point.
 ## run_agent.py — K-run prober for tool-requiring tasks
 
 ```
-run_agent.py task.txt [--cmd "claude"] [--allowed mcp__server__*] [--bypass]
+run_agent.py <task.txt | "task text"> [--cmd "claude"] [--allowed mcp__server__*] [--bypass]
              [-k 3] [--timeout 900] [--policy POLICY.json] [--contract research|none]
 ```
 

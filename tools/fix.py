@@ -34,6 +34,7 @@ import os
 import re
 import subprocess
 import sys
+import tempfile
 import urllib.request
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -55,6 +56,24 @@ def needs_tools(draft):
 def looks_like_code(draft):
     low = draft.lower()
     return any(w in low for w in CODE_WORDS)
+
+
+def materialize_draft(arg):
+    """引数がファイルならそのまま使い、生テキストならファイル化する。
+    (path, text, inline) を返す。.txt/.md 風の実在しないパスはタイポとして拒否
+    (打ち間違いを黙ってプロンプト扱いしない)。"""
+    if os.path.isfile(arg):
+        try:
+            return arg, open(arg).read().strip(), False
+        except OSError as e:
+            print(f"!! cannot read draft: {e}"); sys.exit(2)
+    if arg.endswith((".txt", ".md", ".json")):
+        print(f"!! draft file not found: {arg}"); sys.exit(2)
+    d = tempfile.mkdtemp(prefix="fix-")
+    path = os.path.join(d, "draft.txt")
+    open(path, "w").write(arg.strip() + "\n")
+    print(f"[draft] inline text → {path}")
+    return path, arg.strip(), True
 
 
 def discover_base(cli_base):
@@ -171,7 +190,7 @@ def inputs_gate(inputs_path, kind, ndocs):
 
 def main():
     ap = argparse.ArgumentParser(description="self-fix pipeline driver (procedure as code)")
-    ap.add_argument("draft", help="draft instruction file")
+    ap.add_argument("draft", help="draft instruction: a file path, or the text itself")
     ap.add_argument("rest", nargs="*", help="order-free: inputs.json / URL")
     ap.add_argument("--run", action="store_true", help="also execute and replay-verify")
     ap.add_argument("-k", type=int, default=None, help="runs per probe (spec_holes default)")
@@ -182,19 +201,16 @@ def main():
 
     inputs_path = next((a for a in args.rest if a.endswith(".json")), None)
     cli_base = next((a for a in args.rest if a.startswith(("http://", "https://"))), None)
-    try:
-        draft = open(args.draft).read().strip()
-    except OSError as e:
-        print(f"!! cannot read draft: {e}"); sys.exit(2)
+    draft_path, draft, inline = materialize_draft(args.draft)
 
     # ---- routing (table lookup, no judgment)
     w = needs_tools(draft)
     if w:
-        route_agent(args.draft, w, args.k)  # does not return
+        route_agent(draft_path, w, args.k)  # does not return
     base = discover_base(cli_base)
 
-    root = os.path.splitext(args.draft)[0]
-    work_draft, policy_file, family, render_hint = args.draft, None, None, None
+    root = os.path.splitext(draft_path)[0]
+    work_draft, policy_file, family, render_hint = draft_path, None, None, None
     kind = route = None
     if inputs_path:  # 入力ファイルの形が最優先の証拠(引数の組=コード)
         try:
@@ -204,7 +220,7 @@ def main():
         if data and all(isinstance(x, list) for x in data):
             kind, route = "code", "code"
     if kind is None:
-        sp = run_tool("apply_contract.py", args.draft)
+        sp = run_tool("apply_contract.py", draft_path)
         if sp.returncode == 0:
             work_draft = root + ".contracted.txt"
             policy_file = root + ".policy.json"
@@ -306,6 +322,9 @@ def main():
     print("\n".join(pins) if pins else "  none — draft was already unambiguous")
     print("NOT DONE: intent review. A human or a stronger model must review "
           "every pinned line before use.")
+    if inline:
+        print("\n---- fixed prompt (full text — copy from here) ----")
+        print(open(final).read().rstrip())
 
 
 if __name__ == "__main__":

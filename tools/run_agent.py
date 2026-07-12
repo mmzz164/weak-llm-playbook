@@ -27,6 +27,7 @@ import json
 import os
 import shlex
 import subprocess
+import tempfile
 import sys
 import time
 from collections import Counter
@@ -134,7 +135,7 @@ def report(diverged, consensus):
 
 def main():
     ap = argparse.ArgumentParser(description="K-run headless agent prober (tool tasks)")
-    ap.add_argument("task", help="task instruction file")
+    ap.add_argument("task", help="task instruction: a file path, or the text itself")
     ap.add_argument("--cmd", default=os.environ.get("WEAK_LLM_AGENT_CMD", "claude"),
                     help="agent command, may include args. Default: $WEAK_LLM_AGENT_CMD, "
                          "else 'claude'. Children inherit this session's environment, so "
@@ -161,6 +162,14 @@ def main():
                          "Data-dependent holes (set lineups) become FILL-IN lines for you.")
     args = ap.parse_args()
 
+    if not os.path.isfile(args.task):
+        if args.task.endswith((".txt", ".md", ".json")):
+            print(f"!! task file not found: {args.task}"); sys.exit(2)
+        d = tempfile.mkdtemp(prefix="agent-")
+        path = os.path.join(d, "task.txt")
+        open(path, "w").write(args.task.strip() + "\n")
+        print(f"[task] inline text → {path}")
+        args.task = path
     try:
         task = open(args.task).read().strip()
     except OSError as e:

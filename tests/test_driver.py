@@ -1,10 +1,26 @@
 """fix.py(手順のコード化ドライバ)と run_agent.py(K回比較)の単体テスト。"""
+import os
+import tempfile
 from collections import Counter
 
 from _common import chk, finish
 
 import run_agent as ra  # noqa: E402 (_common が scripts を path に載せている)
 import fix as sf  # noqa: E402
+
+# ---- ドラフトの受け取り: ファイル / インライン文字列 / タイポ拒否
+_td = tempfile.mkdtemp()
+_fp = os.path.join(_td, "d.txt")
+open(_fp, "w").write("hello")
+chk("file draft passthrough", sf.materialize_draft(_fp), (_fp, "hello", False))
+_p, _text, _inline = sf.materialize_draft("インラインの指示文")
+chk("inline draft materialized", (_text, _inline, os.path.isfile(_p)),
+    ("インラインの指示文", True, True))
+try:
+    sf.materialize_draft("darft.txt")
+    chk("typo guard trips", "no exit", "SystemExit(2)")
+except SystemExit as e:
+    chk("typo guard exit 2", e.code, 2)
 
 # ---- ルーティング(表引き)
 chk("tool word mcp", sf.needs_tools("SORAのチケットをMCPで探して"), "mcp")
