@@ -278,7 +278,8 @@ def main():
     artifact = replay_line = None
     if args.run:
         expected = os.path.splitext(final)[0] + ".expected.json"
-        sp = run_tool("replay_check.py", expected, "--prompt", final, base)
+        # オプションの後ろに位置引数を置かない(3.10のargparseは拒否する)
+        sp = run_tool("replay_check.py", expected, "--prompt", final, "--base", base)
         if sp.returncode != 0:
             print("EXECUTION FAILED VERIFICATION (see mismatches above)")
             sys.exit(1)
