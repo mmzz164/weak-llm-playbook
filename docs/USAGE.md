@@ -168,8 +168,8 @@ file into `contracts/`; no code changes needed.
 fix.py <draft.txt | "instruction text"> [inputs.json] [URL] [--run] [-k K]
 ```
 
-Drives the full self-fix procedure as code: endpoint discovery ($PROBE_BASE,
-then ports 8000/8002/8003), routing (external-tool keywords → hand-off to
+Drives the full self-fix procedure as code: explicit endpoint (URL argument or
+$PROBE_BASE — no silent discovery, so you always know what you're talking to), routing (external-tool keywords → hand-off to
 run_agent.py --fix, children bypassed by default, WEAK_LLM_AGENT_TOOLS /
 WEAK_LLM_AGENT_CMD to customize; argument-tuple inputs → code; contract family
 match → shadow contract; document inputs → extraction), probe-input generation for code tasks

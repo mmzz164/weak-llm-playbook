@@ -142,7 +142,7 @@ apply_contract.py draft.txt [--dir DIR] [--list]
 fix.py <draft.txt | "instruction text"> [inputs.json] [URL] [--run] [-k K]
 ```
 
-self-fix手順の全体をコードとして実行する: エンドポイント探索($PROBE_BASE→:8000/:8002/:8003)、
+self-fix手順の全体をコードとして実行する: 接続先は明示(URL引数 か $PROBE_BASE。無言の自動探索はしない——何に繋がっているか常に分かるように)、
 振り分け(外部ツール語→run_agent.py --fixへ自動転送。子は既定バイパス、WEAK_LLM_AGENT_TOOLS /
 WEAK_LLM_AGENT_CMD で調整 / 引数の組の入力→コード / 契約族マッチ→影の契約 / 文書入力→抽出)、コードタスクのプローブ入力生成
 (有界のLLM呼び出し+check_inputsの提案で自動補修)、有界fixループ、受け渡しゲート、

@@ -35,7 +35,6 @@ import re
 import subprocess
 import sys
 import tempfile
-import urllib.request
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
@@ -76,24 +75,17 @@ def materialize_draft(arg):
     return path, arg.strip(), True
 
 
-def discover_base(cli_base):
-    """接続先の自動解決: 明示 > $PROBE_BASE > 既知ポートの疎通確認。"""
-    if cli_base:
-        return cli_base
-    env = os.environ.get("PROBE_BASE")
-    if env:
-        return env
-    for p in (8000, 11434, 8002, 8003):  # vLLM/llama.cpp convention, ollama, spares
-        base = f"http://localhost:{p}"
-        try:
-            urllib.request.urlopen(base + "/v1/models", timeout=2)
-            print(f"[endpoint] {base}")
-            return base
-        except Exception:
-            continue
-    print("NO ENDPOINT: no model server answered on :8000/:11434/:8002/:8003 — "
-          "set PROBE_BASE or pass a URL")
-    sys.exit(2)
+def resolve_base(cli_base):
+    """接続先は明示が原則(URL引数 > $PROBE_BASE)。自動探索はしない——
+    どのサーバー・どのモデルに繋がったか分からない状態を作らないため。"""
+    base = cli_base or os.environ.get("PROBE_BASE")
+    if not base:
+        print("NO ENDPOINT — tell me which server to use:\n"
+              '  fix.py "..." http://localhost:11434      # ollama\n'
+              "  or: export PROBE_BASE=http://localhost:8000   # vLLM / llama.cpp")
+        sys.exit(2)
+    print(f"[endpoint] {base}")
+    return base
 
 
 def route_agent(draft_path, word, k):
@@ -209,7 +201,7 @@ def main():
     w = needs_tools(draft)
     if w:
         route_agent(draft_path, w, args.k)  # does not return
-    base = discover_base(cli_base)
+    base = resolve_base(cli_base)
 
     root = os.path.splitext(draft_path)[0]
     work_draft, policy_file, family, render_hint = draft_path, None, None, None
@@ -260,8 +252,10 @@ def main():
             else:
                 print("!! the model returned empty text (a thinking-mode model may have "
                       "spent the whole budget thinking)")
-            print("!! hints: choose a chat model explicitly with --model NAME "
-                  "(see GET /v1/models), or supply inputs.json yourself")
+            print("!! hints: a thinking model (e.g. qwen3 on ollama) may spend the whole "
+                  "budget thinking — add '/no_think' to your instruction or use a "
+                  "non-thinking model; or pick a model with --model NAME; "
+                  "or supply inputs.json yourself")
             sys.exit(2)
         inputs_path = root + ".inputs.json"
         json.dump(cand, open(inputs_path, "w"), ensure_ascii=False)

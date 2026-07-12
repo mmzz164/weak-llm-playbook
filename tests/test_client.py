@@ -16,30 +16,4 @@ chk("stable order for chat models", lc._order_models(["b-model", "a-model"]),
     ["b-model", "a-model"])
 chk("all-embed still returned", lc._order_models(["x-embed"]), ["x-embed"])
 
-
-# ---- /no_think ソフトスイッチの自動フォールバック
-# (chat_template_kwargs を無視するサーバー=ollama等で、思考が予算を食い潰し
-#  本文が空になったら /no_think 付きで再試行し、効いたら以後常用する)
-class FakeTransport(lc.LLMClient):
-    def __init__(self, answers):
-        super().__init__("m", "http://x", think=False)
-        self.answers = list(answers)
-        self.prompts = []
-
-    def _openai_raw(self, prompt, temperature, max_tokens):
-        self.prompts.append(prompt)
-        return self.answers.pop(0)
-
-
-c = FakeTransport(["<think>ran out of budget", "answer [[1], 2]", "next answer"])
-chk("empty-think triggers retry", c.chat("q1"), "answer [[1], 2]")
-chk("retry appended /no_think", c.prompts[1].endswith("/no_think"), True)
-chk("soft switch remembered", c._soft_nothink, True)
-chk("subsequent calls keep it", (c.chat("q2"), c.prompts[2].endswith("/no_think")),
-    ("next answer", True))
-
-c2 = FakeTransport(["<think>done</think>real answer"])
-chk("normal think stripped without retry", c2.chat("q"), "real answer")
-chk("no retry when text present", len(c2.prompts), 1)
-
 finish("test_client")
