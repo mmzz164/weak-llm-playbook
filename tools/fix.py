@@ -15,7 +15,7 @@ usage:
   inputs.json: code task = array of argument tuples / otherwise = the target
   documents (array of strings). Required for extraction/contract tasks;
   auto-generated for code tasks when omitted. Endpoint resolution: explicit URL
-  > $PROBE_BASE > first of localhost:8000/8002/8003 that answers.
+  > $PROBE_BASE (required — no silent auto-discovery).
 
   Tool-requiring tasks (Jira/MCP/browse keywords) are auto-routed to
   run_agent.py --fix; its disposable children run with permissions bypassed by

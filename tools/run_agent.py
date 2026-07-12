@@ -58,21 +58,30 @@ def compare_results(results, policy):
 
 
 def pin_lines(diverged, ja):
-    """発散フィールドをピン行に翻訳する。値の割れ=多数派で自動ピン(auto)、
-    顔ぶれ(set)の割れ=データ依存なので値では固定できず、人間が条件を書く(manual)。"""
+    """発散フィールドをピン行に翻訳する。多数派がある値の割れ=自動ピン(auto)。
+    顔ぶれ(set)の割れと、多数派のないタイ(全実行バラバラ等)=値では固定できないので
+    人間が意図を書く(manual)。タイを先頭値で固定すると誤誘導になる。"""
     auto, manual = [], []
     for key, c in diverged:
         (top, n), *rest = c.most_common()
+        if top.startswith("set{"):
+            manual.append(f'- ★要記入: "{key}" の顔ぶれが実行ごとに異なる。並び順・範囲・'
+                          "フィルタ条件を1行で明記すること" if ja else
+                          f'- ★FILL IN: the lineup of "{key}" differs across runs. '
+                          "Specify ordering/range/filter in one line")
+            continue
+        if rest and rest[0][1] == n:  # 同数タイ=多数派なし
+            dist = " / ".join(f'"{v}" x{m}' for v, m in c.most_common())
+            manual.append(f'- ★要記入: "{key}" は多数派なし({dist})。意図した値か'
+                          "決め方を1行で明記すること" if ja else
+                          f'- ★FILL IN: no majority for "{key}" ({dist}). State the '
+                          "intended value or rule in one line")
+            continue
         alts = " / ".join(f"{v} ({m})" for v, m in rest)
         note = (f"   # 他候補: {alts}" if ja else f"   # alternatives: {alts}") if rest else ""
         if top.startswith("len="):
             auto.append(f'- "{key}" は {top[4:]}件とする{note}' if ja else
                         f'- count of "{key}" = {top[4:]}{note}')
-        elif top.startswith("set{"):
-            manual.append(f'- ★要記入: "{key}" の顔ぶれが実行ごとに異なる。並び順・範囲・'
-                          "フィルタ条件を1行で明記すること" if ja else
-                          f'- ★FILL IN: the lineup of "{key}" differs across runs. '
-                          "Specify ordering/range/filter in one line")
         else:
             auto.append(f'- "{key}" = {top} とする{note}' if ja else
                         f'- "{key}" = {top}{note}')
@@ -122,12 +131,18 @@ def probe(task, args, outdir):
     return valid, d, c
 
 
-def report(diverged, consensus):
+def report(diverged, consensus, ja=False):
     print("\n## [DIVERGED] spec holes — fields whose values differ across runs (must specify)")
     if not diverged:
         print("  none (runs agree on every compared field)")
     for key, c in diverged:
         print(f"  ★ {key} → " + " / ".join(f'"{v}" x{n}' for v, n in c.most_common()))
+    # 顔ぶれ(set)が割れたときは、生の値の羅列だけでは読めないので結論を文章で出す
+    if any(any(v.startswith("set{") for v in c) for _, c in diverged):
+        print("  → 読み方: 実行ごとに「何を・どの範囲で列挙するか」の解釈が割れています。"
+              "直し方: 列挙する対象・範囲・順序を、元の指示に1行で書き足す" if ja else
+              "  → reading: the runs disagree on WHAT to enumerate. The fix: add one line "
+              "to your instruction naming what to list, its scope and order")
     print("\n## [AGREED] implicit consensus — check against your intent")
     for key, v in consensus:
         print(f"  - {key} → {v}")
@@ -159,7 +174,8 @@ def main():
     ap.add_argument("--fix", nargs="?", const="", metavar="OUT.txt", default=None,
                     help="write a revised task with diverging behaviors pinned to the majority, "
                          "then re-probe it (K more runs) to verify — same UX as spec_holes --fix. "
-                         "Data-dependent holes (set lineups) become FILL-IN lines for you.")
+                         "Data-dependent holes (set lineups) and no-majority ties become "
+                         "FILL-IN lines for you.")
     args = ap.parse_args()
 
     if not os.path.isfile(args.task):
@@ -174,11 +190,12 @@ def main():
         task = open(args.task).read().strip()
     except OSError as e:
         print(f"!! cannot read task: {e}"); sys.exit(2)
+    ja = has_ja(task)
 
     policy = json.load(open(args.policy)) if args.policy else None
     if args.contract == "research" and not any(m in task for m in CONTRACT_MARKS):
         tpl = json.load(open(os.path.join(HERE, "contracts", "research.json")))
-        task += "\n\n" + tpl["instruction_ja" if has_ja(task) else "instruction_en"]
+        task += "\n\n" + tpl["instruction_ja" if ja else "instruction_en"]
         if policy is None:
             policy = tpl["policy"]
         print(f"[contract] appended research contract (policy: {len(policy)} field(s))")
@@ -193,14 +210,13 @@ def main():
     if diverged is None:
         print("!! fewer than 2 valid results — cannot compare; check the runs' raw output")
         sys.exit(1)
-    report(diverged, consensus)
+    report(diverged, consensus, ja)
 
     if args.fix is None:
         sys.exit(1 if diverged else 0)
 
     # --- --fix: 改訂版タスクの生成と再検証(spec_holes --fix と同じ体験) ---
     fix_out = args.fix or (os.path.splitext(args.task)[0] + ".fixed.txt")
-    ja = has_ja(task)
     if not diverged:
         open(fix_out, "w").write(task + "\n")
         print(f"\n[fix] no holes found — task is already reproducible; wrote it unchanged to {fix_out}")
@@ -215,10 +231,32 @@ def main():
     print(f"\n[fix] wrote revised task to {fix_out} "
           f"({len(auto)} pinned, {len(manual)} FILL-IN line(s))")
     if manual:
-        print("[fix] FILL-IN lines need your input (data-dependent lineups cannot be pinned "
-              "to values). Edit them, then re-run:")
-        print(f"[fix]   run_agent.py {fix_out}" +
-              "".join(f' --allowed "{p}"' for p in args.allowed))
+        # 次の一手は常に具体的なコマンドで示す(内部ツール名やtempパスだけ置いて終わらない)。
+        # --cmd 明示時は fix.py 経由だと子コマンドが変わってしまうので run_agent の形で出す。
+        opts = "".join(f' --allowed "{p}"' for p in args.allowed)
+        keep_cmd = f" --cmd {shlex.quote(args.cmd)}" if "--cmd" in sys.argv[1:] else ""
+        me = os.path.abspath(sys.argv[0])
+        amend = (f'python3 {os.path.join(HERE, "fix.py")} "書き足した指示文"' if ja else
+                 f'python3 {os.path.join(HERE, "fix.py")} "your amended instruction"') \
+            if not keep_cmd else \
+            (f'python3 {me} "書き足した指示文" --fix{keep_cmd}{opts}' if ja else
+             f'python3 {me} "your amended instruction" --fix{keep_cmd}{opts}')
+        if ja:
+            print(f"[fix] ★要記入 {len(manual)} 件は自動で確定できません"
+                  "(実行ごとに解釈が割れていて、固定できる多数派の値がないため)。")
+            print("[fix] 次にやること: 上の ★ の点(何を・どの範囲で・どの順で)を"
+                  "元の指示に1行書き足して、再実行:")
+            print(f"[fix]   {amend}")
+            print(f"[fix]   (代替: {fix_out} の ★要記入 行を直接埋めて → "
+                  f"python3 {me} {fix_out} --fix{keep_cmd}{opts})")
+        else:
+            print(f"[fix] {len(manual)} FILL-IN line(s) cannot be settled automatically "
+                  "(the runs disagree on interpretation — there is no majority value to pin).")
+            print("[fix] Next step: add one line to your original instruction covering the "
+                  "★ points (what to list / scope / order), then re-run:")
+            print(f"[fix]   {amend}")
+            print(f"[fix]   (alternative: fill the FILL-IN lines in {fix_out} directly, "
+                  f"then → python3 {me} {fix_out} --fix{keep_cmd}{opts})")
         sys.exit(1)
     print(f"[fix] re-probing the revised task ({args.k} more runs) to verify...")
     _, d2, c2 = probe(fixed, args, outdir + ".fix")
@@ -226,7 +264,7 @@ def main():
         print("!! re-probe produced fewer than 2 valid results"); sys.exit(1)
     print(f"[fix] holes: {len(diverged)} → {len(d2)}")
     if d2:
-        report(d2, c2)
+        report(d2, c2, ja)
         print(f"[fix] holes remain — edit {fix_out} (or rerun --fix on it) and re-verify.")
         sys.exit(1)
     print(f"[fix] verified: the task now behaves reproducibly. Review {fix_out} and rewrite "

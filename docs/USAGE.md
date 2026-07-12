@@ -195,10 +195,13 @@ policy — spec_holes for agent tasks: divergence = a hole in your instruction.
 Raw transcripts and `result<i>.json` artifacts are kept per run.
 
 `--fix [OUT.txt]` closes the loop like spec_holes: it writes a revised task with
-every diverging behavior pinned (scalars and counts pinned to the majority;
+every diverging behavior pinned (scalars and counts pinned to the majority — a
+no-majority tie becomes a FILL-IN line instead of an arbitrary pin;
 data-dependent lineups become explicit FILL-IN lines for you, since concrete
 IDs cannot be pinned in a reusable task), then re-probes the revised task
-(K more runs) and reports holes before → after.
+(K more runs) and reports holes before → after. When FILL-INs remain, the
+report states the concrete next step — add one line to your instruction saying
+what to enumerate — with a copy-pasteable re-run command.
 
 The agent command resolves as `--cmd` > `$WEAK_LLM_AGENT_CMD` > `claude` — and
 children inherit the calling session's environment, so launched from inside a

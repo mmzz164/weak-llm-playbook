@@ -1,7 +1,9 @@
 """fix.py(手順のコード化ドライバ)と run_agent.py(K回比較)の単体テスト。"""
+import io
 import os
 import tempfile
 from collections import Counter
+from contextlib import redirect_stdout
 
 from _common import chk, finish
 
@@ -104,6 +106,32 @@ chk("FILL-IN mentions ordering", "並び順" in manual[0], True)
 auto_en, manual_en = ra.pin_lines(DIV, ja=False)
 chk("en scalar pin", auto_en[0], '- "count" = 3   # alternatives: 5 (1)')
 chk("en FILL-IN", "FILL IN" in manual_en[0], True)
+
+# ---- 多数派なしのタイ(2/4/20等)は自動ピンしない — 先頭値で固定すると誤誘導になる
+TIE = [("count", Counter({"2": 1, "4": 1, "20": 1}))]
+auto_t, manual_t = ra.pin_lines(TIE, ja=True)
+chk("tie: nothing auto-pinned", auto_t, [])
+chk("tie: becomes FILL-IN", len(manual_t), 1)
+chk("tie: shows observed values", '"2" x1' in manual_t[0] and "多数派なし" in manual_t[0], True)
+_, manual_te = ra.pin_lines(TIE, ja=False)
+chk("tie: en wording", "no majority" in manual_te[0], True)
+
+
+# ---- report: 顔ぶれ(set)が割れたら「読み方」の結論行を出す(値の羅列で終わらせない)
+def _report_out(div, cons, ja):
+    buf = io.StringIO()
+    with redirect_stdout(buf):
+        ra.report(div, cons, ja)
+    return buf.getvalue()
+
+
+out = _report_out([("results", Counter({'set{"A"}': 1, 'set{"B"}': 1, 'set{"C"}': 1}))],
+                  [("not_found", "false")], ja=True)
+chk("report: ja reading line on lineup split", "読み方" in out and "列挙" in out, True)
+out = _report_out([("results", Counter({'set{"A"}': 2, 'set{"B"}': 1}))], [], ja=False)
+chk("report: en reading line", "WHAT to enumerate" in out, True)
+out = _report_out([("count", Counter({"3": 2, "5": 1}))], [], ja=True)
+chk("report: no reading line without lineup split", "読み方" in out, False)
 
 
 # ---- 子コマンドの権限: 既定バイパス / --allowed で許可リスト / --no-bypass で素
