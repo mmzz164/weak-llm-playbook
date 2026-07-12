@@ -89,6 +89,7 @@ class LLMClient:
         self.last_usage = None  # 直近chat()の {"in": prompt_tokens, "out": completion_tokens}
         self._no_ctk = False    # openai: chat_template_kwargs 非対応を記憶
         self._no_temp = False   # anthropic: temperature 非対応を記憶
+        self._soft_nothink = False  # openai: /no_think ソフトスイッチ常用を記憶(ollama等)
 
     def _post(self, path, payload, headers):
         req = urllib.request.Request(
@@ -106,9 +107,23 @@ class LLMClient:
     def _finish_openai(self, r):
         u = r.get("usage") or {}
         self.last_usage = {"in": u.get("prompt_tokens"), "out": u.get("completion_tokens")}
-        return _strip_think(r["choices"][0]["message"].get("content") or "")
+        return r["choices"][0]["message"].get("content") or ""
 
     def _openai(self, prompt, temperature, max_tokens):
+        if self._soft_nothink:
+            prompt = prompt + "\n/no_think"
+        raw = self._openai_raw(prompt, temperature, max_tokens)
+        text = _strip_think(raw)
+        if self.think or text.strip():
+            return text
+        if "<think>" in raw and not self._soft_nothink:
+            # 思考が生成予算を食い潰して本文が空(ollama等は chat_template_kwargs を
+            # 黙って無視する)。Qwen系のソフトスイッチ /no_think で再試行し、効けば以後常用。
+            self._soft_nothink = True
+            return _strip_think(self._openai_raw(prompt + "\n/no_think", temperature, max_tokens))
+        return text
+
+    def _openai_raw(self, prompt, temperature, max_tokens):
         headers = {"Authorization": f"Bearer {self.key}"} if self.key else {}
         body = {"model": self.model,
                 "messages": [{"role": "user", "content": prompt}],
