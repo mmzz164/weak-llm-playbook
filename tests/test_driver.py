@@ -1,10 +1,10 @@
-"""selffix.py(手順のコード化ドライバ)と run_agent.py(K回比較)の単体テスト。"""
+"""fix.py(手順のコード化ドライバ)と run_agent.py(K回比較)の単体テスト。"""
 from collections import Counter
 
 from _common import chk, finish
 
 import run_agent as ra  # noqa: E402 (_common が scripts を path に載せている)
-import selffix as sf  # noqa: E402
+import fix as sf  # noqa: E402
 
 # ---- ルーティング(表引き)
 chk("tool word mcp", sf.needs_tools("SORAのチケットをMCPで探して"), "mcp")

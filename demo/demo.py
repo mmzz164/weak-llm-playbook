@@ -3,7 +3,7 @@
 
 Starts a deterministic mock "weak model" (it alternates between two plausible
 implementations of top_n: value-sorted vs first-n), then runs the real
-pipeline (selffix.py --run) against it. Watch it:
+pipeline (fix.py --run) against it. Watch it:
 
   1. detect the divergence   (the spec hole you didn't know you left)
   2. pin the behavior        (revised prompt, alternatives kept as comments)
@@ -49,7 +49,7 @@ def main():
             open(inputs, "w").write(INPUTS)
             print(f"== the draft you might have written ==\n{DRAFT}\n")
             print("== running the real pipeline against a deterministic mock model ==\n")
-            rc = subprocess.run([sys.executable, os.path.join(SCRIPTS, "selffix.py"),
+            rc = subprocess.run([sys.executable, os.path.join(SCRIPTS, "fix.py"),
                                  draft, inputs, f"http://127.0.0.1:{port}", "--run"]).returncode
             print(f"\ndemo exit code: {rc} (0 = hole found, pinned, verified, executed, "
                   "replay-verified)")

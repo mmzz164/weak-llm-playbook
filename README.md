@@ -40,37 +40,31 @@ Anthropic API.
 ```bash
 export PROBE_BASE=http://localhost:8000       # ollama: http://localhost:11434
 
-# THE core tool — find the holes in your draft instruction and get back a
-# fixed prompt, verified to behave reproducibly. It needs two things:
-#   draft.txt   = your instruction, as you'd naturally write it
-#   inputs.json = a few probe inputs to compare the runs on — argument tuples
-#                 for a code task, e.g. [[[3,1,2],2],[[],3]], or the target
-#                 documents (an array of strings) for an extraction task
-# A ready-made pair ships in examples/ — this line runs as-is:
-python3 tools/spec_holes.py examples/draft_topn.txt examples/probe_inputs_topn.json --fix
+# One command. Write your instruction in a file, the way you'd naturally
+# write it, then:
+python3 tools/fix.py draft.txt
+#   -> it finds what you forgot to specify, pins it, and hands back a fixed
+#      prompt verified to behave the same on every run. You review the
+#      PINNED lines. That's the whole workflow.
 
-# Don't want to write probe inputs? selffix.py generates them for code tasks
-# (and gates them mechanically):
-python3 tools/selffix.py draft.txt --run
+# Add --run to also execute the fixed prompt and return a verified result:
+python3 tools/fix.py draft.txt --run
 
-# Once per model — measure its defaults, render a delegation cheat sheet:
-python3 tools/default_probe.py $PROBE_BASE 5
-python3 tools/model_card.py --glob 'profiles/*.json' -o card.md
+# Working on documents (extract fields / review a page / classify)?
+# Pass them along as a JSON array of strings:
+python3 tools/fix.py draft.txt documents.json --run
 
-# Free-form tasks ("review this page", classify, summarize) work too —
-# selffix.py applies a shadow JSON contract behind the scenes, so you never
-# write JSON; pass the target documents as the inputs:
-python3 tools/selffix.py review_draft.txt pages.json --run
-
-# Tool-using tasks (e.g. search a tracker through MCP) run as disposable
-# agent sessions — needs an agent CLI (`claude`, or a local wrapper):
-python3 tools/run_agent.py task.txt --fix
+# Tasks that need external tools (search a tracker through MCP, ...) are
+# auto-routed to disposable agent sessions — needs an agent CLI like `claude`.
 ```
 
-**Vendoring**: the portable core is two stdlib-only files —
-`tools/spec_holes.py` + `tools/llm_client.py`. Drop them into any project.
+Under the hood, `tools/spec_holes.py` is the measuring engine — run the
+instruction K times, diff the results, pin the divergences. Use it directly
+(`python3 tools/spec_holes.py examples/draft_topn.txt examples/probe_inputs_topn.json --fix`),
+and vendor it anywhere: it and `tools/llm_client.py` are two stdlib-only files.
+Per-model habit profiles: `tools/default_probe.py` + `tools/model_card.py`.
 
-Full CLI reference, probe-pack format, compare policies:
+Full CLI reference, pack format, compare policies:
 [docs/USAGE.md](docs/USAGE.md).
 
 ## Findings that shaped the design

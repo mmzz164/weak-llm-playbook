@@ -162,10 +162,10 @@ conventions, missing-data handling). Selection is a table lookup, not a
 judgment call — a weak operator can run it. Add a family by dropping a JSON
 file into `contracts/`; no code changes needed.
 
-## selffix.py — the whole pipeline as one command
+## fix.py — the whole pipeline as one command
 
 ```
-selffix.py draft.txt [inputs.json] [URL] [--run] [-k K]
+fix.py draft.txt [inputs.json] [URL] [--run] [-k K]
 ```
 
 Drives the full self-fix procedure as code: endpoint discovery ($PROBE_BASE,

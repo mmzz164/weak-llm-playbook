@@ -10,7 +10,7 @@ are plain code. An LLM is consulted only through bounded single-purpose calls
 which can skip a step, because the steps are not theirs to execute.
 
 usage:
-  selffix.py draft.txt [inputs.json] [URL] [--run] [-k K]
+  fix.py draft.txt [inputs.json] [URL] [--run] [-k K]
              [--model M] [--api openai|anthropic] [--key KEY]
   inputs.json: code task = array of argument tuples / otherwise = the target
   documents (array of strings). Required for extraction/contract tasks;
@@ -291,7 +291,7 @@ def main():
     # ---- report (machine-assembled; nothing here came from a model's say-so)
     pins = [l for l in open(final).read()[len(open(work_draft).read().strip()):].splitlines()
             if l.strip().startswith("- ")]
-    print("\n==== selffix report ====")
+    print("\n==== fix report ====")
     print(f"ROUTE: {route}")
     print(f"FIXED PROMPT: {final}")
     print(f"INPUTS: {inputs_path} (check_inputs: PASS)")

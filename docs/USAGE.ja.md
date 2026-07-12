@@ -136,10 +136,10 @@ apply_contract.py draft.txt [--dir DIR] [--list]
 だけが残る。選択は表引きであって判断ではないので、弱い操作者でも回せる。族の追加は
 `contracts/` にJSONを置くだけ(コード変更不要)。
 
-## selffix.py — パイプライン全体を1コマンドに
+## fix.py — パイプライン全体を1コマンドに
 
 ```
-selffix.py draft.txt [inputs.json] [URL] [--run] [-k K]
+fix.py draft.txt [inputs.json] [URL] [--run] [-k K]
 ```
 
 self-fix手順の全体をコードとして実行する: エンドポイント探索($PROBE_BASE→:8000/:8002/:8003)、

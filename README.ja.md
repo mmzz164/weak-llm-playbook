@@ -34,34 +34,27 @@ python3 demo/demo.py
 ```bash
 export PROBE_BASE=http://localhost:8000       # ollamaなら http://localhost:11434
 
-# 中核ツール — ドラフト指示の穴を見つけ、再現性を検証済みの修正版プロンプトを得る。
-# 渡すものは2つ:
-#   draft.txt   = あなたが普通に書いた指示文
-#   inputs.json = 実行結果を突き合わせるためのプローブ入力を数個——コードタスクなら
-#                 引数の組(例: [[[3,1,2],2],[[],3]])、抽出タスクなら対象文書(文字列の配列)
-# すぐ試せるペアを examples/ に同梱。この行はそのまま動く:
-python3 tools/spec_holes.py examples/draft_topn.txt examples/probe_inputs_topn.json --fix
+# ワンコマンド。指示を普通の言葉でファイルに書いて:
+python3 tools/fix.py draft.txt
+#   → 書き忘れを見つけ、確定させ、「何回実行しても同じ挙動」を検証済みの
+#     修正版プロンプトを返す。あなたは PINNED の行を眺めるだけ。以上が全工程。
 
-# プローブ入力を自分で書きたくない? コードタスクなら selffix.py が生成する
-# (機械検査つき):
-python3 tools/selffix.py draft.txt --run
+# --run を付ければ実行までして、検証済みの結果を返す:
+python3 tools/fix.py draft.txt --run
 
-# モデルごとに1回 — 既定の癖を測定し、委譲ガイド1枚に集約:
-python3 tools/default_probe.py $PROBE_BASE 5
-python3 tools/model_card.py --glob 'profiles/*.json' -o card.md
+# 文書が対象のタスク(フィールド抽出・ページのレビュー・分類)?
+# 対象文書を文字列の配列(JSON)で一緒に渡すだけ:
+python3 tools/fix.py draft.txt documents.json --run
 
-# 自由文タスク(「このページをレビューして」・分類・要約)もそのまま通る——
-# selffix.py が裏で影のJSON契約を当てるので、あなたはJSONを書かない。
-# 対象文書を入力として渡すだけ:
-python3 tools/selffix.py review_draft.txt pages.json --run
-
-# ツールを使うタスク(MCPでトラッカー検索など)は使い捨てエージェントセッションで
-# 実行 — エージェントCLI(`claude` かローカルラッパー)が必要:
-python3 tools/run_agent.py task.txt --fix
+# 外部ツールが要るタスク(MCPでトラッカー検索など)は自動で使い捨ての
+# エージェントセッションに転送される — `claude` などのエージェントCLIが必要。
 ```
 
-**持ち出し**: 中核は標準ライブラリのみの2ファイル——`tools/spec_holes.py` +
-`tools/llm_client.py`。どのプロジェクトにもそのまま置ける。
+内部では `tools/spec_holes.py` が測定エンジン——指示をK回実行し、結果を突き合わせ、
+割れた所をピン留めする。直接も使えるし
+(`python3 tools/spec_holes.py examples/draft_topn.txt examples/probe_inputs_topn.json --fix`)、
+`tools/llm_client.py` と合わせて標準ライブラリのみの2ファイルなので、どこへでも持ち出せる。
+モデルごとの癖の測定は `tools/default_probe.py` + `tools/model_card.py`。
 
 CLIリファレンス・パック形式・比較ポリシーの詳細:
 [docs/USAGE.ja.md](docs/USAGE.ja.md)。
